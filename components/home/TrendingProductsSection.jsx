@@ -4,13 +4,11 @@ import { useEffect, useState, useCallback } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/firebase/config";
 import { useTranslation } from "react-i18next";
-import { motion } from "framer-motion"; // 🌟 New import
 import ProductCard from "../global/ProductCard";
 
 const TrendingProductsSection = () => {
   const [allProducts, setAllProducts] = useState([]);
   const [activeTab, setActiveTab] = useState("trending");
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const { t, i18n } = useTranslation();
@@ -28,7 +26,6 @@ const TrendingProductsSection = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true);
       try {
         const snapshot = await getDocs(collection(db, "products"));
         const fetched = snapshot.docs.map((doc) => ({
@@ -41,8 +38,6 @@ const TrendingProductsSection = () => {
       } catch (err) {
         console.error("Error fetching products:", err);
         setError(t("errors.failedToLoadProducts"));
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -83,9 +78,7 @@ const TrendingProductsSection = () => {
         </div>
 
         {/* Content */}
-        {isLoading ? (
-          <div className='text-center text-gray-500'>{t("loading")}</div>
-        ) : error ? (
+        {error ? (
           <div className='text-center text-red-600'>{error}</div>
         ) : (
           <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6'>
@@ -93,20 +86,14 @@ const TrendingProductsSection = () => {
               ? getTrendingProducts()
               : allProducts
             ).map((product) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-              >
+              <div key={product.id}>
                 <ProductCard
                   product={product}
                   locale={locale}
                   currencySymbol={currencySymbol}
                   formatNumber={formatNumber}
                 />
-              </motion.div>
+              </div>
             ))}
           </div>
         )}

@@ -4,26 +4,25 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 
-import { Input } from "../ui/input";
 import {
   Command,
   CommandInput,
   CommandList,
   CommandItem,
-  CommandEmpty,
   CommandGroup,
 } from "../ui/command";
-import { Search } from "react-feather";
 
 import { db } from "../../firebase/config";
 import { getDocs, collection } from "firebase/firestore";
+
+import { Search, Camera } from "react-feather";
 
 const ProductSearch = () => {
   const [productQuery, setProductQuery] = useState("");
   const [productOptions, setProductOptions] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
 
-  const { t } = useTranslation(); // 🌟
+  const { t } = useTranslation();
   const router = useRouter();
 
   const normalize = (str) => {
@@ -78,20 +77,50 @@ const ProductSearch = () => {
     }
   };
 
+  const handleSearch = () => {
+    if (productQuery.trim() !== "") {
+      const selectedProduct = productOptions.find((item) =>
+        normalize(item.name).includes(normalize(productQuery.trim()))
+      );
+      if (selectedProduct?.id) {
+        router.push(`/product/${selectedProduct.id}`);
+      } else {
+        router.push(`/search?query=${encodeURIComponent(productQuery.trim())}`);
+      }
+    }
+  };
+
   return (
     <div className='relative w-full'>
-      {/* Search Input */}
-      <div className='relative'>
-        <Input
-          type='search'
-          placeholder={t("search.searchPlaceholder")} // 🌟
+      {/* Custom Sticky Navbar Search Layout */}
+      <div className='flex items-center w-full border rounded-full overflow-hidden shadow-sm h-10 bg-white'>
+        {/* Left Category (static) */}
+        <div className='px-3 border-r text-gray-600 text-sm flex items-center gap-1 h-full'>
+          {t("sticky.products")}
+        </div>
+
+        {/* Search Input */}
+        <input
+          type='text'
+          placeholder={t("sticky.search_placeholder")}
           value={productQuery}
           onChange={(e) => setProductQuery(e.target.value)}
-          className='pl-10 rounded-full border-[#2c6449] text-[#2c6449] placeholder-[#2c6449]'
+          className='flex-1 px-4 text-sm h-full focus:outline-none'
         />
-        <div className='absolute inset-y-0 left-3 flex items-center pointer-events-none'>
-          <Search size={16} className='text-[#2c6449]' />
-        </div>
+
+        {/* Camera Button (dummy for now) */}
+        <button className='px-3'>
+          <Camera size={20} className='text-gray-500' />
+        </button>
+
+        {/* Search Button */}
+        <button
+          onClick={handleSearch}
+          className='bg-primary hover:bg-green-700 text-white text-sm px-4 rounded-r-full flex items-center gap-1 h-full'
+        >
+          <Search size={16} />
+          {t("sticky.research")}
+        </button>
       </div>
 
       {/* Dropdown Results */}
@@ -101,7 +130,7 @@ const ProductSearch = () => {
             <CommandInput
               value={productQuery}
               onValueChange={setProductQuery}
-              placeholder={t("search.searchPlaceholder")} // 🌟
+              placeholder={t("sticky.search_placeholder")}
               className='hidden'
             />
             <CommandList className='max-h-[400px] overflow-y-auto'>
