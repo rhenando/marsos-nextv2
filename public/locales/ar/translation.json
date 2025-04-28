@@ -1,0 +1,95 @@
+{
+  "header": {
+    "account": "الحساب",
+    "signin": "تسجيل الدخول",
+    "logout": "تسجيل الخروج",
+    "dashboard": "لوحة التحكم",
+    "messages": "الرسائل",
+    "cart": "عربة",
+    "request_rfq": "طلب عرض سعر",
+    "location": "موقعك",
+    "home": "الصفحة الرئيسية",
+    "all_categories": "جميع الفئات",
+    "featured": "مميز",
+    "trending": "الأكثر تداولاً",
+    "secured_trading": "تداول آمن",
+    "help_center": "مركز المساعدة",
+    "become_supplier": "كن مورداً"
+  },
+  "search": {
+    "searchPlaceholder": "ابحث عن المنتجات...",
+    "productsHeading": "المنتجات",
+    "noResults": "لم يتم العثور على منتجات مطابقة."
+  },
+  "hero": {
+    "title": "المنتجات السعودية تحت مظلة واحدة",
+    "paragraph1": "نحن هنا لجعل الإستيراد أسهل و آمن. اكتشف منصة تجمع المنتجات السعودية - في مكان واحد.",
+    "paragraph2": "من الطلب و حتى الإستلام، التكنولوجيا الصديقة للمستخدم وخيارات الدفع المريحة، وكذلك الشحن و التغليف.",
+    "banner1": {
+      "cta": "اعرف المزيد"
+    },
+    "banner2": {
+      "title": "موردون سعوديون موثوقون",
+      "desc": "احصل على شبكة مختارة من المصنعين المعتمدين في السعودية. من الأقمشة إلى الأدوات، احصل عليها مباشرة من الرواد.",
+      "cta": "تصفح الموردين"
+    },
+    "banner3": {
+      "title": "منتجات ذات جودة معتمدة",
+      "desc": "يستوفي موردونا المعايير العالمية للجودة والشهادات والسلامة. تسوق بثقة في كل مرة.",
+      "cta": "عرض المنتجات المعتمدة"
+    },
+    "categories": "الفئات",
+    "recommendations": "قد يعجبك",
+    "productsInCategory": "منتجات في هذه الفئة",
+    "requestRFQ": "طلب عرض سعر الآن",
+    "cards": {
+      "choice": "خيارات متنوعة",
+      "choiceDesc": "الوصول إلى موردين ومنتجات متعددة",
+      "secure": "تجارة آمنة",
+      "secureDesc": "تأمين معاملاتك بالكامل",
+      "topSupplier": "أفضل الموردين",
+      "topSupplierDesc": "تعاون مع قادة الصناعة",
+      "fastResponse": "استجابة سريعة",
+      "fastResponseDesc": "استلم العروض والردود بسرعة"
+    }
+  },
+  "product": {
+    "unnamed": "منتج بدون اسم"
+  },
+  "section": {
+    "trending": "Trending Products",
+    "allProducts": "All Products"
+  },
+  "loading": "Loading...",
+  "errors": {
+    "failedToLoadProducts": "Failed to load products. Please try again."
+  },
+
+  "product_card": {
+    "hot": "مميز",
+    "unnamed_product": "منتج بدون اسم",
+    "login_first": "يرجى تسجيل الدخول للتواصل مع المورد.",
+    "no_supplier": "معرف المورد غير موجود.",
+    "supplier": "المورد:",
+    "unknown": "غير معروف",
+    "negotiable": "قابل للتفاوض",
+    "min_order": "أدنى طلب: {{minOrder}} قطعة",
+    "view_details": "عرض التفاصيل",
+    "contact_supplier": "تواصل مع المورد"
+  },
+  "uncategorized": "غير مصنف",
+  "sticky": {
+    "products": "منتجات",
+    "search_placeholder": "ابحث عن المنتجات...",
+    "research": "بحث",
+    "delivery_to": "التوصيل إلى",
+    "flags": {
+      "sa": "السعودية",
+      "ae": "الإمارات",
+      "qa": "قطر",
+      "om": "عُمان",
+      "kw": "الكويت",
+      "bh": "البحرين"
+    }
+  }
+}

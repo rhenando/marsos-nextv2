@@ -1,11 +1,6 @@
 import { Montserrat, Cairo } from "next/font/google";
 import "./globals.css";
-
-import { AuthProvider } from "../context/AuthContext";
-import { CartProvider } from "../context/CartContext";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import Header from "../components/header/Header";
+import RootProvider from "./RootProvider";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -30,15 +25,8 @@ export default function RootLayout({ children }) {
   return (
     <html lang='en'>
       <body className={`${montserrat.variable} ${cairo.variable} antialiased`}>
-        <AuthProvider>
-          <CartProvider>
-            <Header />
-            {children}
-            <ToastContainer />
-          </CartProvider>
-        </AuthProvider>
+        <RootProvider>{children}</RootProvider>
       </body>
     </html>
   );
 }
-``;

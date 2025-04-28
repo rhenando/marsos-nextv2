@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 
 import RfqModal from "../rfq/Rfq";
 import ProductSearch from "@/components/header/ProductSearch";
+import LanguageSelector from "@/components/header/LanguageSelector";
 
 import { Button } from "../ui/button";
 import { Sheet, SheetTrigger, SheetContent } from "../ui/sheet";
@@ -21,17 +23,18 @@ import {
   ShoppingCart,
   MapPin,
   Send,
-  Globe,
   LogOut,
   Home,
 } from "react-feather";
 
 const Header = () => {
   const { cartItemCount, userRole } = useCart();
-  const { currentUser, userData, logout } = useAuth();
+  const { currentUser, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [showRFQModal, setShowRFQModal] = useState(false);
+
+  const { t } = useTranslation();
 
   const handleLogout = async () => {
     try {
@@ -54,7 +57,7 @@ const Header = () => {
           />
         </Link>
 
-        {/* Center: Search (hidden on mobile) */}
+        {/* Center: Search */}
         <div className='hidden md:flex flex-1 mx-6 relative'>
           <ProductSearch />
         </div>
@@ -66,7 +69,9 @@ const Header = () => {
             <PopoverTrigger asChild>
               <Button variant='ghost' className='flex items-center gap-2'>
                 <User size={18} />
-                <span className='text-sm hidden lg:inline'>Account</span>
+                <span className='text-sm hidden lg:inline'>
+                  {t("header.account")}
+                </span>
               </Button>
             </PopoverTrigger>
             <PopoverContent align='end' className='w-40 text-sm'>
@@ -82,14 +87,14 @@ const Header = () => {
                       if (userRole === "admin") router.push("/admin-dashboard");
                     }}
                   >
-                    Dashboard
+                    {t("header.dashboard")}
                   </Button>
                   <Button
                     variant='ghost'
                     className='w-full justify-start'
                     onClick={handleLogout}
                   >
-                    Logout
+                    {t("header.logout")}
                   </Button>
                 </>
               ) : (
@@ -98,7 +103,7 @@ const Header = () => {
                   className='w-full justify-start'
                   onClick={() => router.push("/user-login")}
                 >
-                  Sign In
+                  {t("header.signin")}
                 </Button>
               )}
             </PopoverContent>
@@ -108,7 +113,9 @@ const Header = () => {
           <Link href='/user-messages'>
             <Button variant='ghost' className='flex items-center gap-2'>
               <MessageSquare size={18} />
-              <span className='text-sm hidden lg:inline'>Messages</span>
+              <span className='text-sm hidden lg:inline'>
+                {t("header.messages")}
+              </span>
             </Button>
           </Link>
 
@@ -117,7 +124,9 @@ const Header = () => {
             <Link href='/cart' className='relative'>
               <Button variant='ghost' className='flex items-center gap-2'>
                 <ShoppingCart size={18} />
-                <span className='text-sm hidden lg:inline'>Cart</span>
+                <span className='text-sm hidden lg:inline'>
+                  {t("header.cart")}
+                </span>
               </Button>
               {cartItemCount > 0 && (
                 <span className='absolute -top-1 -right-1 bg-[#2c6449] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center'>
@@ -127,7 +136,7 @@ const Header = () => {
             </Link>
           )}
 
-          {/* RFQ Button */}
+          {/* RFQ */}
           <Button
             variant='outline'
             size='sm'
@@ -135,36 +144,26 @@ const Header = () => {
             onClick={() => setShowRFQModal(true)}
           >
             <Send size={16} />
-            <span className='text-sm hidden lg:inline'>Request RFQ</span>
+            <span className='text-sm hidden lg:inline'>
+              {t("header.request_rfq")}
+            </span>
           </Button>
 
           {/* Location */}
           <Link href='/basket'>
             <Button variant='ghost' className='flex items-center gap-2'>
               <MapPin size={18} />
-              <span className='text-sm hidden lg:inline'>Location</span>
+              <span className='text-sm hidden lg:inline'>
+                {t("header.location")}
+              </span>
             </Button>
           </Link>
 
-          {/* Language Switcher */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button size='icon' variant='ghost' className='rounded-full'>
-                <Globe size={18} />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align='end' className='w-32 text-sm'>
-              <Button variant='ghost' className='w-full justify-start'>
-                English
-              </Button>
-              <Button variant='ghost' className='w-full justify-start'>
-                العربية
-              </Button>
-            </PopoverContent>
-          </Popover>
+          {/* Language Selector */}
+          <LanguageSelector />
         </div>
 
-        {/* Mobile: Hamburger Menu */}
+        {/* Mobile Hamburger */}
         <div className='flex md:hidden'>
           <Sheet>
             <SheetTrigger asChild>
@@ -177,7 +176,7 @@ const Header = () => {
                 <Link href='/'>
                   <Button variant='ghost' className='w-full justify-start'>
                     <Home size={16} className='mr-2' />
-                    Home
+                    {t("header.home")}
                   </Button>
                 </Link>
                 {currentUser ? (
@@ -194,7 +193,7 @@ const Header = () => {
                           router.push("/admin-dashboard");
                       }}
                     >
-                      Dashboard
+                      {t("header.dashboard")}
                     </Button>
                     <Button
                       variant='ghost'
@@ -202,7 +201,7 @@ const Header = () => {
                       onClick={handleLogout}
                     >
                       <LogOut size={16} className='mr-2' />
-                      Logout
+                      {t("header.logout")}
                     </Button>
                   </>
                 ) : (
@@ -212,27 +211,27 @@ const Header = () => {
                     onClick={() => router.push("/user-login")}
                   >
                     <User size={16} className='mr-2' />
-                    Sign In
+                    {t("header.signin")}
                   </Button>
                 )}
                 <Link href='/user-messages'>
                   <Button variant='ghost' className='w-full justify-start'>
                     <MessageSquare size={16} className='mr-2' />
-                    Messages
+                    {t("header.messages")}
                   </Button>
                 </Link>
                 {userRole !== "admin" && userRole !== "supplier" && (
                   <Link href='/cart'>
                     <Button variant='ghost' className='w-full justify-start'>
                       <ShoppingCart size={16} className='mr-2' />
-                      Cart
+                      {t("header.cart")}
                     </Button>
                   </Link>
                 )}
                 <Link href='/basket'>
                   <Button variant='ghost' className='w-full justify-start'>
                     <MapPin size={16} className='mr-2' />
-                    Location
+                    {t("header.location")}
                   </Button>
                 </Link>
                 <Button
@@ -241,7 +240,7 @@ const Header = () => {
                   onClick={() => setShowRFQModal(true)}
                 >
                   <Send size={16} className='mr-2' />
-                  Request RFQ
+                  {t("header.request_rfq")}
                 </Button>
               </div>
             </SheetContent>
@@ -249,7 +248,53 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Search bar on Mobile */}
+      {/* 🚀 NAVLINKS DIRECTLY BELOW */}
+      <div className='hidden lg:block w-full bg-white px-6 py-2 text-base text-[#2c6449] border-t border-b border-gray-200'>
+        <div className='flex justify-between items-center flex-wrap gap-y-2'>
+          {/* LEFT: Categories and Links */}
+          <div className='flex flex-wrap items-center gap-x-6'>
+            <Link
+              href='/categories'
+              className='font-semibold hover:text-[#1b4533] transition-all'
+            >
+              {t("header.all_categories")}
+            </Link>
+            <Link
+              href='/products'
+              className='hover:text-[#1b4533] transition-all'
+            >
+              {t("header.featured")}
+            </Link>
+            <Link
+              href='/products'
+              className='hover:text-[#1b4533] transition-all'
+            >
+              {t("header.trending")}
+            </Link>
+          </div>
+
+          {/* RIGHT: Support & Actions */}
+          <div className='flex flex-wrap items-center gap-x-6'>
+            <Link href='/' className='hover:text-[#1b4533] transition-all'>
+              {t("header.secured_trading")}
+            </Link>
+            <Link
+              href='/help-center'
+              className='hover:text-[#1b4533] transition-all'
+            >
+              {t("header.help_center")}
+            </Link>
+            <Link
+              href='/become-supplier'
+              className='hover:text-[#1b4533] transition-all'
+            >
+              {t("header.become_supplier")}
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Search */}
       <div className='block md:hidden px-4 mt-2'>
         <ProductSearch />
       </div>

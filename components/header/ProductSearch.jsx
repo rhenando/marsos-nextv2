@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 
 import { Input } from "../ui/input";
 import {
@@ -22,6 +23,7 @@ const ProductSearch = () => {
   const [productOptions, setProductOptions] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
 
+  const { t } = useTranslation(); // 🌟
   const router = useRouter();
 
   const normalize = (str) => {
@@ -82,7 +84,7 @@ const ProductSearch = () => {
       <div className='relative'>
         <Input
           type='search'
-          placeholder='Search products...'
+          placeholder={t("search.searchPlaceholder")} // 🌟
           value={productQuery}
           onChange={(e) => setProductQuery(e.target.value)}
           className='pl-10 rounded-full border-[#2c6449] text-[#2c6449] placeholder-[#2c6449]'
@@ -92,19 +94,19 @@ const ProductSearch = () => {
         </div>
       </div>
 
-      {/* Separate Full Dropdown */}
+      {/* Dropdown Results */}
       {productQuery && (
         <div className='absolute left-0 right-0 top-full mt-2 z-50'>
           <Command className='w-full bg-white border border-gray-200 shadow-md rounded-lg overflow-hidden'>
             <CommandInput
               value={productQuery}
               onValueChange={setProductQuery}
-              placeholder='Search products...'
+              placeholder={t("search.searchPlaceholder")} // 🌟
               className='hidden'
             />
             <CommandList className='max-h-[400px] overflow-y-auto'>
               {filteredProducts.length > 0 ? (
-                <CommandGroup heading='Products'>
+                <CommandGroup heading={t("search.productsHeading")}>
                   {filteredProducts.map((product) => (
                     <CommandItem
                       key={product.id}
@@ -131,7 +133,7 @@ const ProductSearch = () => {
                     className='w-24 h-24 object-contain'
                   />
                   <p className='text-gray-500 text-sm'>
-                    No matching products found.
+                    {t("search.noResults")}
                   </p>
                 </div>
               )}

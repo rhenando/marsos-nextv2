@@ -1,9 +1,13 @@
 "use client";
 
+import HeroSection from "@/components/home/HeroSection";
+import TrendingProductsSection from "@/components/home/TrendingProductsSection";
+
 export default function Home() {
   return (
     <main className='flex flex-col'>
-      <h1>Banana</h1>
+      <HeroSection />
+      <TrendingProductsSection />
     </main>
   );
 }

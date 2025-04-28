@@ -1,76 +1,81 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
+
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Globe } from "react-feather";
 
 const LanguageSelector = () => {
-  const [showMenu, setShowMenu] = useState(false);
-  const [languageTimeout, setLanguageTimeout] = useState(null);
-  const [selectedLanguage, setSelectedLanguage] = useState("English");
+  const { i18n } = useTranslation();
+  const [selectedLanguage, setSelectedLanguage] = useState("en");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    document.documentElement.dir =
-      selectedLanguage === "العربية" ? "rtl" : "ltr";
-  }, [selectedLanguage]);
+    const browserLang = navigator.language || navigator.userLanguage;
 
-  const handleLanguageChange = (label) => {
-    setSelectedLanguage(label);
-    document.documentElement.dir = label === "العربية" ? "rtl" : "ltr";
-    setShowMenu(false);
+    if (browserLang.startsWith("ar")) {
+      i18n.changeLanguage("ar");
+      setSelectedLanguage("ar");
+      document.documentElement.dir = "rtl";
+    } else {
+      i18n.changeLanguage("en");
+      setSelectedLanguage("en");
+      document.documentElement.dir = "ltr";
+    }
+  }, []);
+
+  const changeLanguage = (lng) => {
+    setLoading(true); // Start loading
+    i18n.changeLanguage(lng).then(() => {
+      setSelectedLanguage(lng);
+      document.documentElement.dir = lng === "ar" ? "rtl" : "ltr";
+
+      // After slight delay, remove loading
+      setTimeout(() => {
+        setLoading(false);
+      }, 500);
+    });
   };
 
   return (
-    <div
-      className='relative flex flex-col items-center cursor-pointer text-[#2c6449]'
-      onMouseEnter={() => {
-        clearTimeout(languageTimeout);
-        setShowMenu(true);
-      }}
-      onMouseLeave={() => {
-        const timeout = setTimeout(() => setShowMenu(false), 200);
-        setLanguageTimeout(timeout);
-      }}
-    >
-      <img
-        src={`https://flagcdn.com/h20/${
-          selectedLanguage === "English" ? "us" : "sa"
-        }.png`}
-        alt='flag'
-        className='w-5 h-5 mb-1 object-contain rounded-sm'
-      />
-      <div className='flex items-center gap-1'>
-        <span>{selectedLanguage}</span>
-        <svg
-          className='w-4 h-4 mt-[2px]'
-          fill='none'
-          stroke='currentColor'
-          viewBox='0 0 24 24'
-        >
-          <path
-            strokeLinecap='round'
-            strokeLinejoin='round'
-            strokeWidth={2}
-            d='M19 9l-7 7-7-7'
-          />
-        </svg>
-      </div>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button size='icon' variant='ghost' className='rounded-full'>
+          <Globe size={18} />
+        </Button>
+      </PopoverTrigger>
 
-      {showMenu && (
-        <ul className='absolute right-0 top-full mt-2 w-[80px] bg-white border border-gray-200 rounded shadow-md z-50 text-sm text-[#2c6449]'>
-          <li
-            className='px-4 py-2 hover:bg-[#2c6449] hover:text-white cursor-pointer'
-            onClick={() => handleLanguageChange("English")}
-          >
-            English
-          </li>
-          <li
-            className='px-4 py-2 hover:bg-[#2c6449] hover:text-white cursor-pointer'
-            onClick={() => handleLanguageChange("العربية")}
-          >
-            العربية
-          </li>
-        </ul>
-      )}
-    </div>
+      <PopoverContent align='end' className='w-32 text-sm'>
+        {loading ? (
+          <div className='text-center py-2 text-[#2c6449] font-semibold'>
+            Loading...
+          </div>
+        ) : (
+          <>
+            <Button
+              variant='ghost'
+              className='w-full justify-start'
+              onClick={() => changeLanguage("en")}
+            >
+              English
+            </Button>
+            <Button
+              variant='ghost'
+              className='w-full justify-start'
+              onClick={() => changeLanguage("ar")}
+            >
+              العربية
+            </Button>
+          </>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 };
 

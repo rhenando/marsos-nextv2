@@ -1,0 +1,96 @@
+{
+  "header": {
+    "account": "Account",
+    "signin": "Sign In",
+    "logout": "Logout",
+    "dashboard": "Dashboard",
+    "messages": "Messages",
+    "cart": "Cart",
+    "request_rfq": "Request RFQ",
+    "location": "Location",
+    "home": "Home",
+    "all_categories": "All Categories",
+    "featured": "Featured",
+    "trending": "Trending",
+    "secured_trading": "Secured Trading",
+    "help_center": "Help Center",
+    "become_supplier": "Become a Supplier"
+  },
+  "search": {
+    "searchPlaceholder": "Search products...",
+    "productsHeading": "Products",
+    "noResults": "No matching products found."
+  },
+  "hero": {
+    "title": "Effortless Shopping for the Saudi Products, Right at Your Fingertips",
+    "paragraph1": "We’re here to make your importing experience as comfortable and seamless as possible. Discover a platform that unites the products from across the Kingdom of Saudi Arabia—all in one place.",
+    "paragraph2": "From manufactures to your door, we bring together a diverse range of services with a user-friendly technology and convenient payment options, to have a seamless purchasing experience",
+    "banner1": {
+      "cta": "Know More"
+    },
+    "banner2": {
+      "title": "Trusted Saudi Suppliers",
+      "desc": "Access a curated network of certified manufacturers across Saudi Arabia. From textiles to tools, source directly from industry leaders.",
+      "cta": "Browse Suppliers"
+    },
+    "banner3": {
+      "title": "Verified Quality Products",
+      "desc": "Our suppliers meet global standards for product quality, certifications, and safety. Shop with confidence, every time.",
+      "cta": "See Verified Products"
+    },
+    "categories": "Categories",
+    "recommendations": "Recommended for You",
+    "productsInCategory": "Products",
+    "requestRFQ": "Request RFQ",
+    "cards": {
+      "choice": "Wide Choices",
+      "choiceDesc": "Access diverse suppliers and products",
+      "secure": "Secure Trading",
+      "secureDesc": "Your transactions are safe with us",
+      "topSupplier": "Top Suppliers",
+      "topSupplierDesc": "Partner with industry leaders",
+      "fastResponse": "Fast Response",
+      "fastResponseDesc": "Receive quick quotes and offers"
+    }
+  },
+  "product": {
+    "unnamed": "Unnamed Product"
+  },
+  "section": {
+    "trending": "Trending Products",
+    "allProducts": "All Products"
+  },
+  "loading": "Loading...",
+  "errors": {
+    "failedToLoadProducts": "Failed to load products. Please try again."
+  },
+
+  "product_card": {
+    "hot": "Hot",
+    "unnamed_product": "Unnamed Product",
+    "login_first": "Please log in to contact the supplier.",
+    "no_supplier": "Supplier ID is missing.",
+    "supplier": "Supplier:",
+    "unknown": "Unknown",
+    "negotiable": "Pricing Negotiable - Contact Supplier",
+    "min_order": "Min. Order: {{minOrder}} pcs",
+    "view_details": "View Details",
+    "contact_supplier": "Contact Supplier"
+  },
+
+  "uncategorized": "Uncategorized",
+  "sticky": {
+    "products": "Products",
+    "search_placeholder": "Search for products...",
+    "research": "Search",
+    "delivery_to": "Deliver to",
+    "flags": {
+      "sa": "Saudi Arabia",
+      "ae": "UAE",
+      "qa": "Qatar",
+      "om": "Oman",
+      "kw": "Kuwait",
+      "bh": "Bahrain"
+    }
+  }
+}
