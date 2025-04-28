@@ -1,4 +1,8 @@
-import React, { useEffect } from "react";
+"use client";
+
+import { useEffect } from "react";
+import Link from "next/link"; // ✅ Next.js Link
+import Image from "next/image"; // ✅ Next.js Image
 import {
   Instagram,
   Linkedin,
@@ -8,14 +12,6 @@ import {
   Globe,
 } from "react-feather";
 import { useTranslation } from "react-i18next";
-
-import saudiLogo from "../assets/saudi_business_logo.svg";
-import visa from "../assets/visa.png";
-import mastercard from "../assets/mastercard.png";
-import applepay from "../assets/applepay.png";
-import mada from "../assets/mada.png";
-import tamara from "../assets/tamara.png";
-import tabby from "../assets/tabby.png";
 
 const Footer = () => {
   const { t } = useTranslation();
@@ -51,19 +47,19 @@ const Footer = () => {
             </h3>
             <ul className='space-y-2'>
               <li>
-                <a href='/top-supplier' className='hover:underline'>
+                <Link href='/top-supplier' className='hover:underline'>
                   {t("footer.browseSuppliers")}
-                </a>
+                </Link>
               </li>
               <li>
-                <a href='/products' className='hover:underline'>
+                <Link href='/products' className='hover:underline'>
                   {t("footer.exploreProducts")}
-                </a>
+                </Link>
               </li>
               <li>
-                <a href='/categories' className='hover:underline'>
+                <Link href='/categories' className='hover:underline'>
                   {t("footer.viewCategories")}
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -75,22 +71,25 @@ const Footer = () => {
             </h3>
             <ul className='space-y-2'>
               <li>
-                <a href='/faq' className='hover:underline'>
+                <Link href='/faq' className='hover:underline'>
                   {t("footer.helpCenter")}
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   href='/updated-terms-and-conditions'
                   className='hover:underline'
                 >
                   {t("footer.terms")}
-                </a>
+                </Link>
               </li>
               <li>
-                <a href='/updated-privacy-policy' className='hover:underline'>
+                <Link
+                  href='/updated-privacy-policy'
+                  className='hover:underline'
+                >
                   {t("footer.privacy")}
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -124,28 +123,37 @@ const Footer = () => {
 
         {/* Payments + Logo + SSL */}
         <div className='mt-10 flex flex-col md:flex-row justify-between items-center gap-y-6 border-t pt-6'>
-          {/* Saudi Logo */}
-          <img
-            src={saudiLogo}
+          {/* Saudi Business Logo */}
+          <Image
+            src='/saudi_business_logo.svg' // ✅ Now from public folder
             alt='Saudi Business Center'
-            className='w-auto h-16'
+            width={160}
+            height={64}
+            className='w-auto h-16 object-contain'
           />
 
           {/* Payment Methods */}
           <div className='flex flex-wrap justify-center gap-3'>
-            {[visa, mastercard, applepay, mada, tamara, tabby].map(
-              (logo, i) => (
-                <img
-                  key={i}
-                  src={logo}
-                  alt='Payment'
-                  className='h-4 object-contain'
-                />
-              )
-            )}
+            {[
+              "/visa.png",
+              "/master.png",
+              "/applepay.png",
+              "/mada.png",
+              "/tamara.png",
+              "/tabby.png",
+            ].map((logo, i) => (
+              <Image
+                key={i}
+                src={logo}
+                alt='Payment'
+                width={60}
+                height={40}
+                className='h-4 object-contain'
+              />
+            ))}
           </div>
 
-          {/* GoGetSSL Seal */}
+          {/* SSL Seal */}
           <div className='text-center'>
             <a
               href='https://www.gogetssl.com'

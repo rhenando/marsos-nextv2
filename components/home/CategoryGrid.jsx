@@ -1,19 +1,20 @@
-import React, { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
-import { Link } from "react-router-dom";
-import { db } from "../firebase/config";
+"use client";
 
-// ✅ Clean slug generator
+import { useEffect, useState } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import Link from "next/link";
+import { db } from "@/firebase/config";
+
 const slugify = (text) =>
   text
     .toString()
     .trim()
     .toLowerCase()
-    .replace(/\s+/g, "-") // Replace spaces with -
-    .replace(/[^\w\-ا-ي]+/g, "") // Remove non-word characters, keep Arabic
-    .replace(/--+/g, "-") // Collapse multiple dashes
-    .replace(/^-+/, "") // Trim leading dash
-    .replace(/-+$/, ""); // Trim trailing dash
+    .replace(/\s+/g, "-")
+    .replace(/[^\w\-ا-ي]+/g, "")
+    .replace(/--+/g, "-")
+    .replace(/^-+/, "")
+    .replace(/-+$/, "");
 
 const CategoryGrid = () => {
   const [categories, setCategories] = useState([]);
@@ -28,14 +29,14 @@ const CategoryGrid = () => {
 
         allProducts.forEach((product) => {
           const category = product.category?.trim() || "Uncategorized";
-          const slug = slugify(category); // ✅ Consistent slug
+          const slug = slugify(category);
 
           if (!categoryMap[slug]) {
             categoryMap[slug] = {
               name: category,
               slug: slug,
               image: product.mainImageUrl || "https://via.placeholder.com/100",
-              badge: product.categoryBadge || "", // Optional
+              badge: product.categoryBadge || "",
             };
           }
         });
@@ -57,10 +58,10 @@ const CategoryGrid = () => {
         Explore Categories
       </h2>
 
-      <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6'>
+      <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-6'>
         {categories.map((cat, index) => (
           <Link
-            to={`/category/${cat.slug}`}
+            href={`/category/${cat.slug}`}
             key={index}
             className='relative group flex flex-col items-center p-4 border rounded-xl hover:shadow-md hover:border-[#2c6449] transition duration-300'
           >

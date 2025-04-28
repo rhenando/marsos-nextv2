@@ -92,5 +92,20 @@
       "kw": "Kuwait",
       "bh": "Bahrain"
     }
+  },
+  "footer": {
+    "aboutTitle": "About Marsos",
+    "aboutText": "Marsos is your gateway to verified Saudi products and trusted suppliers. We simplify your sourcing journey with secure transactions, smart filters, and direct communication.",
+    "quickLinks": "Quick Links",
+    "browseSuppliers": "Browse Suppliers",
+    "exploreProducts": "Explore Products",
+    "viewCategories": "View Categories",
+    "support": "Support",
+    "helpCenter": "Help Center",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "language": "Language",
+    "followUs": "Follow Us",
+    "rights": "© 2025 Marsos Technologies. Driving trade and innovation across Saudi Arabia."
   }
 }

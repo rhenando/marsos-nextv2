@@ -7,17 +7,19 @@ import { CartProvider } from "../context/CartContext";
 import {
   HeaderPaddingProvider,
   useHeaderPadding,
-} from "@/context/HeaderPaddingContext"; // ✅ New
-import { LoadingProvider } from "@/context/LoadingContext";
+} from "@/context/HeaderPaddingContext";
+import { LoadingProvider } from "../context/LoadingContext";
 import GlobalLoading from "@/components/global/GlobalLoading";
 import Header from "../components/header/Header";
 import StickySearchBar from "../components/header/StickySearchBar";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+import Lenis from "@studio-freight/lenis"; // 🚀 NEW import
+
 function AppLayout({ children }) {
   const [showSticky, setShowSticky] = useState(false);
-  const { needsPadding } = useHeaderPadding(); // ✅ Read from context
+  const { needsPadding } = useHeaderPadding();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -29,7 +31,29 @@ function AppLayout({ children }) {
     };
 
     window.addEventListener("scroll", handleScroll);
+
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // 🚀 NEW useEffect to initialize Lenis
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smooth: true,
+      smoothTouch: false,
+    });
+
+    function raf(time) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+
+    requestAnimationFrame(raf);
+
+    return () => {
+      lenis.destroy();
+    };
   }, []);
 
   return (
@@ -52,11 +76,9 @@ export default function RootProvider({ children }) {
     <AuthProvider>
       <CartProvider>
         <HeaderPaddingProvider>
-          {" "}
-          {/* ✅ Wrap */}
           <LoadingProvider>
             <GlobalLoading />
-            <AppLayout>{children}</AppLayout> {/* ✅ Clean separation */}
+            <AppLayout>{children}</AppLayout>
           </LoadingProvider>
         </HeaderPaddingProvider>
       </CartProvider>
