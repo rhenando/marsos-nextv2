@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import "../i18n";
+
 import { AuthProvider } from "../context/AuthContext";
 import { CartProvider } from "../context/CartContext";
 import {
@@ -9,13 +10,16 @@ import {
   useHeaderPadding,
 } from "@/context/HeaderPaddingContext";
 import { LoadingProvider } from "../context/LoadingContext";
+import { LocalizationProvider } from "../context/LocalizationContext"; // ✅ NEW import
+
 import GlobalLoading from "@/components/global/GlobalLoading";
 import Header from "../components/header/Header";
 import StickySearchBar from "../components/header/StickySearchBar";
+
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-import Lenis from "@studio-freight/lenis"; // 🚀 NEW import
+import Lenis from "@studio-freight/lenis";
 
 function AppLayout({ children }) {
   const [showSticky, setShowSticky] = useState(false);
@@ -35,7 +39,6 @@ function AppLayout({ children }) {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // 🚀 NEW useEffect to initialize Lenis
   useEffect(() => {
     const lenis = new Lenis({
       duration: 1.2,
@@ -77,8 +80,12 @@ export default function RootProvider({ children }) {
       <CartProvider>
         <HeaderPaddingProvider>
           <LoadingProvider>
-            <GlobalLoading />
-            <AppLayout>{children}</AppLayout>
+            <LocalizationProvider>
+              {" "}
+              {/* ✅ NEW Wrapper */}
+              <GlobalLoading />
+              <AppLayout>{children}</AppLayout>
+            </LocalizationProvider>
           </LoadingProvider>
         </HeaderPaddingProvider>
       </CartProvider>

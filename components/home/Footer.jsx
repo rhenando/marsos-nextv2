@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import Link from "next/link"; // ✅ Next.js Link
-import Image from "next/image"; // ✅ Next.js Image
+import Link from "next/link";
+import Image from "next/image";
 import {
   Instagram,
   Linkedin,
@@ -17,14 +17,15 @@ const Footer = () => {
   const { t } = useTranslation();
 
   useEffect(() => {
-    const script = document.createElement("script");
-    script.src =
-      "https://gogetssl-cdn.s3.eu-central-1.amazonaws.com/site-seals/gogetssl-seal.js";
-    script.async = true;
-    document.body.appendChild(script);
-    return () => {
-      document.body.removeChild(script);
-    };
+    // Check if script already exists before adding to avoid double render!
+    if (!document.getElementById("gogetssl-seal-script")) {
+      const script = document.createElement("script");
+      script.src =
+        "https://gogetssl-cdn.s3.eu-central-1.amazonaws.com/site-seals/gogetssl-seal.js";
+      script.async = true;
+      script.id = "gogetssl-seal-script"; // Unique ID to prevent double
+      document.body.appendChild(script);
+    }
   }, []);
 
   return (
@@ -125,7 +126,7 @@ const Footer = () => {
         <div className='mt-10 flex flex-col md:flex-row justify-between items-center gap-y-6 border-t pt-6'>
           {/* Saudi Business Logo */}
           <Image
-            src='/saudi_business_logo.svg' // ✅ Now from public folder
+            src='/saudi_business_logo.svg'
             alt='Saudi Business Center'
             width={160}
             height={64}
@@ -133,7 +134,9 @@ const Footer = () => {
           />
 
           {/* Payment Methods */}
-          <div className='flex flex-wrap justify-center gap-3'>
+          <div className='flex flex-wrap justify-center gap-1'>
+            {" "}
+            {/* reduced gap */}
             {[
               "/visa.png",
               "/master.png",
@@ -146,9 +149,9 @@ const Footer = () => {
                 key={i}
                 src={logo}
                 alt='Payment'
-                width={60}
-                height={40}
-                className='h-4 object-contain'
+                width={80} // made them bigger
+                height={50}
+                className='h-6 object-contain' // bigger height
               />
             ))}
           </div>

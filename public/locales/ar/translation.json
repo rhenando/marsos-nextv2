@@ -106,5 +106,453 @@
     "language": "اللغة",
     "followUs": "تابعنا",
     "rights": "© 2025 مرسوس تكنولوجيز. نُسهم في تعزيز التجارة والابتكار في المملكة العربية السعودية."
+  },
+
+  "home": {
+    "title": "مرصوص - السوق السعودي للمنتجات والموردين",
+    "description": "مرصوص هو منصة إلكترونية سعودية تجمع الموردين والمشترين للمواد والمعدات والمنتجات المحلية."
+  },
+  "topbar": {
+    "email": "marsos@marsos.sa",
+    "phone": "+٩٦٦٥٣٠٠١٤٧٠٧",
+    "becomeSupplier": "إنضم كمصنع للمنتجات السعودية",
+    "yourLocation": "موقعك"
+  },
+  "navbar": {
+    "logout": "تسجيل الخروج",
+    "Home": "الصفحة الرئيسية",
+    "Featured Products": "المنتجات الرائجة",
+    "Categories": "التصنيفات",
+    "Contact": "تواصل",
+    "USD": "دولار أمريكي",
+    "SAR": "ريال سعودي",
+    "rfqs": "طلب عرض سعر"
+  },
+
+  "menu": {
+    "home": "الصفحة الرئيسية",
+    "profiles": "الملف الشخصي",
+    "terms": "الشروط",
+    "employees": "الموظفين",
+    "messages": "الرسائل",
+    "products": "المنتجات",
+    "orders": "الطلبات",
+    "rfqs": "RFQs",
+    "settings": "الإعدادات",
+    "support": "الدعم"
+  },
+  "dashboard": {
+    "title": "لوحة التحكم",
+    "welcome": "مرحبًا بك في لوحة التحكم، {{name}}",
+    "description": "هذا هو المكان الذي يمكنك فيه إدارة كل شيء.",
+    "terms": "إدارة الشروط والأحكام",
+    "terms_description": "قم بإدارة شروطك وأحكامك هنا.",
+    "orders": "إدارة الطلبات",
+    "orders_description": "قم بإدارة جميع طلباتك في مكان واحد.",
+    "settings": "الإعدادات",
+    "settings_description": "قم بإدارة إعداداتك وتفضيلاتك.",
+    "support": "الدعم والمساعدة",
+    "support_description": "تواصل مع فريق الدعم الخاص بنا.",
+    "rfqs": "RFQs",
+    "rfqs_description": "RFQs",
+    "default_message": "مرحبًا بك في لوحة التحكم"
+  },
+  "construction": {
+    "price_range": "من {{lowestPrice}} إلى {{highestPrice}}",
+    "unnamed_product": "منتج غير مسمى",
+    "view_details": "عرض التفاصيل",
+    "min_order": "أقل طلب: {{minOrder}} قطعة"
+  },
+  "equipment": {
+    "price_range": "من {{lowestPrice}} إلى {{highestPrice}}",
+    "unnamed_product": "منتج غير مسمى",
+    "view_details": "عرض التفاصيل",
+    "min_order": "أقل طلب: {{minOrder}} قطعة"
+  },
+  "plastic_papers": {
+    "price_range": "من {{lowestPrice}} إلى {{highestPrice}}",
+    "unnamed_product": "منتج غير مسمى",
+    "view_details": "عرض التفاصيل",
+    "min_order": "أقل طلب: {{minOrder}} قطعة"
+  },
+  "saudi_manufactured": {
+    "price_range": "من {{lowestPrice}} إلى {{highestPrice}}",
+    "unnamed_product": "منتج غير مسمى",
+    "view_details": "عرض التفاصيل",
+    "min_order": "أقل طلب: {{minOrder}} قطعة"
+  },
+  "manage_profiles": {
+    "title": "إدارة الملف الشخصي",
+    "fields": {
+      "name": "الاسم",
+      "address": "العنوان",
+      "crNumber": "رقم السجل التجاري",
+      "vatNumber": "رقم التسجيل الضريبي",
+      "email": "لإيميل",
+      "role": "المهمة",
+      "company_description": "وصف الشركة",
+      "logo": "الشعار",
+      "current_logo": "الشعار الحالي",
+      "no_logo_uploaded": "لم يتم رفع شعار"
+    },
+    "actions": {
+      "uploading_logo": "جارٍ رفع الشعار...",
+      "save": "حفظ",
+      "cancel": "إلغاء",
+      "edit": "تعديل"
+    },
+    "messages": {
+      "loading": "جارٍ التحميل...",
+      "no_profile_data_available": "لا توجد بيانات ملف شخصي متاحة.",
+      "logo_uploaded_success": "تم رفع الشعار بنجاح!",
+      "profile_updated_success": "تم تحديث الملف الشخصي بنجاح!"
+    },
+    "errors": {
+      "no_user_logged_in": "لم يتم تسجيل دخول أي مستخدم.",
+      "no_profile_found": "لم يتم العثور على الملف الشخصي.",
+      "failed_to_load_profile": "فشل في تحميل الملف الشخصي.",
+      "failed_to_update_profile": "فشل في تحديث الملف الشخصي."
+    }
+  },
+  "cart": {
+    "currency": "ر.س",
+    "title": "سلة التسوق",
+    "emptyMessage": "سلة التسوق فارغة.",
+    "supplier": "المورد",
+    "image": "الصورة",
+    "item": "المنتج",
+    "size": "الحجم",
+    "color": "اللون",
+    "quantity": "الكمية",
+    "price": "السعر",
+    "shipping": "الشحن",
+    "subtotal": "الإجمالي",
+    "actions": "الإجراءات",
+    "checkout": "إتمام الشراء",
+    "contactSupplier": "الاتصال بالمصنع",
+    "reviewOrder": "مراجعة الطلب",
+    "remove": "إزالة",
+    "updatedSuccessfully": "تم التحديث بنجاح.",
+    "failedToUpdate": "فشل في التحديث",
+    "itemRemovedSuccessfully": "تمت إزالة المنتج بنجاح.",
+    "failedToRemoveItem": "فشل في إزالة المنتج.",
+    "notificationSuccess": "نجاح",
+    "notificationError": "خطأ",
+    "loginToContactSupplier": "يرجى تسجيل الدخول للاتصال بالمورد.",
+    "failedToContactSupplier": "فشل في الاتصال بالمورد.",
+    "cartEmptyError": "سلة التسوق فارغة.",
+    "unknownSupplier": "مورد غير معروف",
+    "unknownBuyer": "مشتري غير معروف",
+    "notSelected": "غير محدد"
+  },
+  "buyer_profile": {
+    "title": "إدارة ملفك الشخصي",
+    "fields": {
+      "name": "الاسم",
+      "email": "البريد الإلكتروني",
+      "address": "العنوان",
+      "phone": "رقم الهاتف",
+      "crNumber": "CR",
+      "vatNumber": "VAT",
+      "logo": "الصورة الشخصية",
+      "current_logo": "الصورة الشخصية الحالية",
+      "no_logo_uploaded": "لم يتم تحميل صورة شخصية"
+    },
+    "messages": {
+      "loading": "جارٍ تحميل الملف الشخصي...",
+      "no_profile_data_available": "لا توجد بيانات ملف شخصي متوفرة.",
+      "logo_uploaded_success": "تم تحميل الصورة الشخصية بنجاح.",
+      "profile_updated_success": "تم تحديث الملف الشخصي بنجاح."
+    },
+    "errors": {
+      "no_user_logged_in": "لم يتم تسجيل دخول أي مستخدم.",
+      "no_profile_found": "لم يتم العثور على ملف شخصي.",
+      "failed_to_load_profile": "فشل في تحميل الملف الشخصي.",
+      "failed_to_update_profile": "فشل في تحديث الملف الشخصي."
+    },
+    "actions": {
+      "edit": "تعديل الملف الشخصي",
+      "save": "حفظ التغييرات",
+      "cancel": "إلغاء",
+      "uploading_logo": "جارٍ تحميل الصورة الشخصية..."
+    }
+  },
+  "review_order": {
+    "title": "مراجعة الطلب",
+    "currency": "ر.س",
+    "product_details": {
+      "title": "تفاصيل المنتج",
+      "image": "صورة المنتج",
+      "name": "اسم المنتج",
+      "unit_price": "سعر الوحدة",
+      "quantity": "الكمية",
+      "shipping": "الشحن",
+      "total_excl_vat": "الإجمالي بدون الضريبة",
+      "tax_rate": "نسبة الضريبة",
+      "tax_value": "قيمة الضريبة",
+      "total_incl_vat": "الإجمالي مع الضريبة"
+    },
+    "invoice": {
+      "tax_invoice": "فاتورة ضريبية",
+      "date_time": "التاريخ والوقت",
+      "serial_number": "رقم الفاتورة"
+    },
+    "supplier_info": {
+      "title": "معلومات المورد",
+      "name": "اسم المورد",
+      "address": "عنوان المورد",
+      "vat_number": "رقم تسجيل ضريبة القيمة المضافة",
+      "cr_number": "رقم السجل التجاري"
+    },
+    "buyer_info": {
+      "title": "معلومات المشتري",
+      "name": "اسم المشتري",
+      "address": "عنوان المشتري",
+      "vat_number": "رقم تسجيل ضريبة القيمة المضافة للمشتري",
+      "cr_number": "رقم السجل التجاري للمشتري"
+    },
+    "totals": {
+      "total": "الإجمالي",
+      "vat": "ضريبة القيمة المضافة (15%)",
+      "grand_total": "الإجمالي الكلي"
+    },
+    "actions": {
+      "print": "طباعة",
+      "checkout": "إتمام الشراء",
+      "proceed_to_checkout": "المتابعة لإتمام الشراء"
+    },
+    "errors": {
+      "no_supplier_found": "لم يتم العثور على المورد.",
+      "no_buyer_found": "لم يتم العثور على المشتري.",
+      "fetch_failed": "فشل في جلب البيانات."
+    }
+  },
+  "common": {
+    "na": "غير متوفر"
+  },
+  "admin_dashboard": {
+    "dashboard_title": "لوحة تحكم المسؤول",
+    "home": "الصفحة الرئيسية",
+    "dashboard_overview": "ملخص لوحة التحكم",
+    "products": "المنتجات",
+    "product_management": "إدارة المنتجات ",
+    "product_library": "مكتبة المنتجات",
+    "manage_orders": "إدارة الطلبات",
+    "abandoned_carts": "سلة التسوق المتروكة ",
+    "analytics_overview": "ملخص التحليلات ",
+    "live_analytics": "التحليلات المباشرة",
+    "analytics_reports": "تقارير التحليلات",
+    "seo_enhancements": "تحسين محركات البحث ",
+    "promo_code": "الرمز الترويجي",
+    "coupon_code": "رمز القسيمة",
+    "user_management": "إدارة المستخدمين",
+    "suppliers": "الموردين",
+    "buyers": "المشترين",
+    "admins_management": "إدارة المسؤولين",
+    "settings": "الإعدادات",
+    "admins": "المسؤول ",
+    "order_management": "إدارة الطلبات",
+    "orders": "الطلبات",
+    "analytics": "النحليلات",
+    "overview": "نظرة عامة",
+    "reports": "التقارير",
+    "marketing": "التسويق ",
+    "page_not_found": "الصفحة غير موجودة"
+  },
+  "admin_products": {
+    "products": "المنتجات",
+    "all_products": "جميع المنتجات",
+    "location": "الموقع",
+    "price": "السعر",
+    "quantity": "الكمية",
+    "search_by": "البحث بواسطة اسم المنتج او اسم المورد",
+    "search": "بحث",
+    "reset": "إعادة الضبط",
+    "export_to": "تصدير إلى اكسل",
+    "additional": "خيارات إضافية",
+    "add_new": "إضافة منتج جديد",
+    "all": "الكل",
+    "product_name": "اسم المنتج",
+    "product": "المنتج",
+    "supplier_name": "اسم المورد",
+    "quantity_pricing": "الكمية والتسعير",
+    "size": "الحجم",
+    "color": "اللون",
+    "actions": "الإجراءات",
+    "edit": "تعديل",
+    "remove": "حذف",
+    "previous": "السابق",
+    "next": "التالي",
+    "page": "الصفحة",
+    "of": "من"
+  },
+  "admin_supplier": {
+    "suppliers": "الموردين",
+    "manage_suppliers": "إدارة وعرض جميع الموردين",
+    "add_suppliers": "إضافة مورد جديد",
+    "cancel": "إلغاء",
+    "name": "الاسم",
+    "phone": "رقم الجوال",
+    "email": "الإيميل",
+    "company_name": "اسم الشركة",
+    "actions": "الإجراءات",
+    "edit": "تعديل",
+    "remove": "حذف",
+    "previous": "السابق",
+    "next": "التالي",
+    "page": "الصفحة",
+    "of": "من"
+  },
+  "admin_product_add": {
+    "supplier_name": "اسم المورد",
+    "select_supplier": "اختر المورد",
+    "supplier_id": "معرف المورد ",
+    "supplier_number": "رقم المورد",
+    "product_name": "اسم المنتج",
+    "category": "الفئة",
+    "select_or_create_category": "حدد أو قم بإنشاء فئة",
+    "sub_category": "الفئة الفرعية",
+    "select_or_create_subcategory": "حدد أو قم بإنشاء فئة فرعية",
+    "description": "الوصف",
+    "main_location": "الموقع الرئيسي",
+    "select_or_create_location": "حدد أو أنشئ الموقع",
+    "sizes": "الأحجام",
+    "select_or_create_size": "حدد أو أنشئ الحجم",
+    "colors": "الألوان",
+    "select_or_create_color": "حدد أو أنشئ اللون ",
+    "main_image": "الصورة الرئيسية",
+    "additional_images": "صورة إضافية",
+    "add_another_image": "أضف صورة أخرى ",
+    "remove": "إزالة",
+    "tier": "فئة السعر",
+    "min_qty": "أدنى كمية",
+    "select_or_create_qty": "حدد أو أنشئ الكمية",
+    "max_qty": "أعلى كمية",
+    "price": "السعر",
+    "select_or_create_price": "حدد أو أنشئ السعر",
+    "delivery_locations": "مواقع التوصيل",
+    "location": "الموقع",
+    "location_price": "سعر الموقع",
+    "add_location": "إضافة موقع",
+    "remove_price_range": "إزالة نطاق السعر",
+    "add_price_range": "أضف نطاق السعر",
+    "upload_product": "تحميل المنتج",
+    "uploading": "جاري التحميل ...",
+    "validation_error": "خطأ التحقق",
+    "select_supplier_first": "يرجى تحديد المورد قبل الإرسال.",
+    "fill_all_fields": "يرجى ملء جميع الحقول المطلوبة قبل الإرسال.",
+    "success": "نجاح",
+    "product_uploaded": "لقد تم تحميل منتجك بنجاح.",
+    "submission_error": "خطأ في الإرسال",
+    "upload_failed": "فشل تحميل المنتج. يرجى المحاولة مرة أخرى لاحقًا.",
+    "title": "تحميل المنتج",
+    "choose_file": "اختيار الملف",
+    "no_file_chosen": "لم يتم اختيار الملف"
+  },
+  "buyer_registration": {
+    "title": "تسجيل المشتري",
+    "name": "الاسم",
+    "surname": "اسم اللقب",
+    "email": "الإيميل",
+    "address": "العنوان",
+    "crNumber": "رقم السجل التجاري",
+    "choose_file": "اختيار الملف",
+    "vatNumber": "رقم ضريبة القيمة المضافة",
+    "logo": "صورة الملف الشخصي",
+    "current_logo": "صورة الملف الشخصي الحالية",
+    "no_logo_uploaded": "لم يتم تحميل صورة الملف الشخصي",
+    "continue": "استمرار",
+    "no_file_chosen": "لا يوجد ملف",
+    "upload_cr_license": "ارفق السجل التجاري",
+    "bank_account": "رقم الايبان البنكي",
+    "bank_name": "اسم البنك",
+    "account_holder": "اسم مالك الحساب البنكي"
+  },
+  "product_chats": {
+    "priceTiers": "مستويات السعر",
+    "shippingPrices": "تكاليف الشحن",
+    "quantity": "الكمية",
+    "color": "اللون",
+    "size": "المقاس",
+    "location": "الموقع",
+    "subtotal": "الإجمالي الفرعي",
+    "shipping": "الشحن",
+    "addToCart": "أضف إلى السلة",
+    "reviewOrder": "مراجعة الطلب",
+    "buyerTotals": "إجماليات المشتري",
+    "productAlreadyInCart": "المنتج موجود بالفعل في السلة.",
+    "productAddedToCart": "تمت إضافة المنتج إلى السلة."
+  },
+  "chat": {
+    "noMessages": "لا توجد رسائل بعد",
+    "placeholder": "اكتب رسالة",
+    "attachPhoto": "صورة/فيديو",
+    "attachDocument": "مستند",
+    "attachContact": "جهة اتصال"
+  },
+  "mobile_header": {
+    "messages": "الرسائل",
+    "rfq": "طلب عرض سعر",
+    "cart": "عربة",
+    "location": "الموقع"
+  },
+  "productChat": {
+    "missingInfo": "معلومات المنتج أو المورد مفقودة.",
+    "headingWith": "استفسار عن المنتج مع",
+    "productLabel": "المنتج",
+    "errorMessage": "❌ معلومات المنتج / المورد مفقودة."
+  },
+
+  "products": {
+    "title": "المنتجات",
+    "subtitle": "جميع المنتجات",
+    "export": "تصدير المنتجات",
+    "options": "خيارات إضافية",
+    "addNew": "إضافة منتج جديد",
+    "product": "المنتج",
+    "name": "الاسم",
+    "supplierName": "اسم المورد",
+    "location": "الموقع",
+    "qtyPricing": "الكمية والتسعير",
+    "size": "المقاس",
+    "color": "اللون",
+    "actions": "الإجراءات",
+    "edit": "تعديل",
+    "remove": "حذف",
+    "page": "الصفحة",
+    "of": "من",
+    "previous": "السابق",
+    "next": "التالي",
+    "min": "الحد الأدنى",
+    "max": "الحد الأقصى",
+    "price": "السعر",
+    "quantity": "الكمية",
+    "filter": "تصفية المنتجات",
+    "search": "بحث",
+    "searchPlaceholder": "ابحث بالاسم أو برمز المنتج",
+    "confirmDelete": "هل أنت متأكد أنك تريد حذف هذا المنتج؟",
+    "deleteSuccess": "تم حذف المنتج بنجاح!",
+    "deleteFail": "فشل في حذف المنتج.",
+    "notAuthorized": "غير مصرح لك بعرض هذه الصفحة."
+  },
+  "categories": {
+    "categories": "الفئات",
+    "products": "{{count}} منتج",
+    "no_products_found": "لم يتم العثور على منتجات في هذا التصنيف الفرعي."
+  },
+
+  "supplier-products": {
+    "title": "المنتجات",
+    "subtitle": "اكتشف أفضل المنتجات من هذا المورد.",
+    "filters": "الفلاتر",
+    "categories": "الفئات",
+    "priceRange": "نطاق السعر",
+    "searchPlaceholder": "ابحث عن المنتجات...",
+    "previous": "السابق",
+    "next": "التالي",
+    "page": "صفحة",
+    "of": "من",
+    "noProductsFound": "لم يتم العثور على منتجات.",
+    "moreFromSupplier": "منتجات أخرى من هذا المورد"
   }
 }

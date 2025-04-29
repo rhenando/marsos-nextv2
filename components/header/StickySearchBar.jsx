@@ -9,9 +9,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 
 import RfqModal from "../rfq/Rfq";
-import LanguageSelector from "@/components/header/LanguageSelector";
-import ProductSearch from "@/components/header/ProductSearch"; // 🚀 Import it here
-
+import ProductSearch from "@/components/header/ProductSearch";
 import { Button } from "../ui/button";
 import { Sheet, SheetTrigger, SheetContent } from "../ui/sheet";
 import { Popover, PopoverTrigger, PopoverContent } from "../ui/popover";
@@ -25,10 +23,9 @@ import {
   Send,
   LogOut,
   Home,
-  Camera,
-  Globe,
-  Clipboard,
 } from "react-feather";
+
+import { useLocalization } from "@/context/LocalizationContext"; // ✅ import context
 
 const StickySearchBar = () => {
   const { cartItemCount, userRole } = useCart();
@@ -36,8 +33,8 @@ const StickySearchBar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const [showRFQModal, setShowRFQModal] = useState(false);
-  const [selectedCountry, setSelectedCountry] = useState("sa");
 
+  const { selectedCountry } = useLocalization(); // ✅ only read
   const { t } = useTranslation();
 
   const handleLogout = async () => {
@@ -72,12 +69,12 @@ const StickySearchBar = () => {
 
         {/* Center: Dynamic Product Search */}
         <div className='flex flex-1 mx-4 max-w-3xl'>
-          <ProductSearch /> {/* 🚀 Called your full search here */}
+          <ProductSearch />
         </div>
 
         {/* Right: Actions */}
         <div className='hidden md:flex items-center gap-4 text-[#2c6449]'>
-          {/* Delivery Location */}
+          {/* Delivery Location Display */}
           <div className='text-xs flex flex-col items-center'>
             <span>{t("sticky.delivery_to")}</span>
             <span className='flex items-center gap-1'>
@@ -89,9 +86,6 @@ const StickySearchBar = () => {
               {selectedCountry.toUpperCase()}
             </span>
           </div>
-
-          {/* Language */}
-          <LanguageSelector />
 
           {/* User */}
           <Popover>
@@ -166,7 +160,7 @@ const StickySearchBar = () => {
             <Send size={20} />
           </Button>
 
-          {/* Location */}
+          {/* Location Link */}
           <Link href='/basket'>
             <Button variant='ghost' className='flex items-center gap-2'>
               <MapPin size={22} />

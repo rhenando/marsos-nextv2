@@ -74,7 +74,13 @@ const Header = () => {
                 </span>
               </Button>
             </PopoverTrigger>
-            <PopoverContent align='end' className='w-40 text-sm'>
+            <PopoverContent
+              align='end'
+              className='w-40 text-sm z-[9999]'
+              sideOffset={8}
+              portal
+              forceMount
+            >
               {currentUser ? (
                 <>
                   <Button
