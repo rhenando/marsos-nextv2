@@ -77,6 +77,7 @@ const Header = ({ setShowRFQModal }) => {
               align='end'
               className='w-40 text-sm z-[9999]'
               sideOffset={8}
+              portal
               forceMount
             >
               {currentUser ? (

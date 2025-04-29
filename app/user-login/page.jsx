@@ -12,14 +12,15 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-import { showSuccess, showError, showInfo } from "@/utils/toastUtils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { showSuccess, showError } from "@/utils/toastUtils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 const UserLogin = () => {
   const router = useRouter();
+  const [countryCode, setCountryCode] = useState("+966");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
@@ -59,14 +60,15 @@ const UserLogin = () => {
   };
 
   const handleSendOtp = async () => {
-    if (!phone || phone.length < 9) {
+    if (!phone || phone.length < 7) {
       showError("Enter a valid phone number.");
       return;
     }
+
     setLoading(true);
     setupRecaptcha();
     const appVerifier = window.recaptchaVerifier;
-    const fullPhoneNumber = "+966" + phone;
+    const fullPhoneNumber = `${countryCode}${phone}`;
 
     try {
       const confirmationResult = await signInWithPhoneNumber(
@@ -89,8 +91,8 @@ const UserLogin = () => {
       showError("Enter the 6-digit OTP.");
       return;
     }
-    setLoading(true);
 
+    setLoading(true);
     try {
       const result = await window.confirmationResult.confirm(otp);
       showSuccess("Phone verified!");
@@ -102,66 +104,101 @@ const UserLogin = () => {
   };
 
   return (
-    <div className='flex min-h-screen items-center justify-center bg-gray-100'>
-      <ToastContainer position='top-center' autoClose={3000} />
-      <div id='recaptcha-container' />
+    <div className='w-full lg:grid lg:min-h-screen lg:grid-cols-2'>
+      {/* Left Side: Form */}
+      <div className='flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-white'>
+        <Card className='w-full max-w-md shadow-xl rounded-xl p-6'>
+          <CardHeader>
+            <CardTitle className='text-center text-3xl text-[#2c6449]'>
+              {showOtpScreen ? "Enter OTP" : "Login with Phone"}
+            </CardTitle>
+          </CardHeader>
 
-      <Card className='w-[360px] shadow-lg'>
-        <CardHeader>
-          <CardTitle className='text-center text-2xl text-[#2c6449]'>
-            {showOtpScreen ? "Enter OTP" : "Login with Phone"}
-          </CardTitle>
-        </CardHeader>
-
-        <CardContent className='flex flex-col gap-4'>
-          {showOtpScreen ? (
-            <>
-              <Input
-                type='text'
-                placeholder='Enter OTP'
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-              />
-
-              <Button
-                className='bg-[#2c6449] hover:bg-[#24523b]'
-                onClick={handleVerifyOtp}
-                disabled={loading}
-              >
-                {loading ? (
-                  <Loader2 className='animate-spin w-5 h-5' />
-                ) : (
-                  "Verify OTP"
-                )}
-              </Button>
-            </>
-          ) : (
-            <>
-              <div className='flex items-center gap-2'>
-                <span className='text-sm font-semibold'>+966</span>
+          <CardContent className='mt-6 space-y-6'>
+            {showOtpScreen ? (
+              <>
                 <Input
-                  type='tel'
-                  placeholder='5XXXXXXXX'
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                  type='text'
+                  placeholder='Enter OTP'
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
                 />
-              </div>
+                <Button
+                  onClick={handleVerifyOtp}
+                  disabled={loading}
+                  className='w-full bg-[#2c6449] hover:bg-[#24523b]'
+                >
+                  {loading ? (
+                    <Loader2 className='animate-spin w-5 h-5' />
+                  ) : (
+                    "Verify OTP"
+                  )}
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className='flex items-center gap-2'>
+                  <select
+                    value={countryCode}
+                    onChange={(e) => setCountryCode(e.target.value)}
+                    className='border rounded px-2 py-2 bg-white text-sm'
+                  >
+                    <option value='+966'>🇸🇦 +966</option>
+                    <option value='+971'>🇦🇪 +971</option>
+                    <option value='+965'>🇰🇼 +965</option>
+                    <option value='+973'>🇧🇭 +973</option>
+                    <option value='+968'>🇴🇲 +968</option>
+                    <option value='+974'>🇶🇦 +974</option>
+                  </select>
+                  <Input
+                    type='tel'
+                    placeholder='5XXXXXXXX'
+                    value={phone}
+                    onChange={(e) =>
+                      setPhone(e.target.value.replace(/\D/g, ""))
+                    }
+                  />
+                </div>
 
-              <Button
-                className='bg-[#2c6449] hover:bg-[#24523b]'
-                onClick={handleSendOtp}
-                disabled={loading}
+                <Button
+                  onClick={handleSendOtp}
+                  disabled={loading}
+                  className='w-full bg-[#2c6449] hover:bg-[#24523b]'
+                >
+                  {loading ? (
+                    <Loader2 className='animate-spin w-5 h-5' />
+                  ) : (
+                    "Send OTP"
+                  )}
+                </Button>
+              </>
+            )}
+
+            <p className='text-center text-sm text-gray-500'>
+              Don’t have an account?{" "}
+              <a
+                href='/register'
+                className='font-medium text-[#2c6449] hover:underline'
               >
-                {loading ? (
-                  <Loader2 className='animate-spin w-5 h-5' />
-                ) : (
-                  "Send OTP"
-                )}
-              </Button>
-            </>
-          )}
-        </CardContent>
-      </Card>
+                Sign up
+              </a>
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Right Side: Image */}
+      <div className='hidden lg:block bg-muted'>
+        <img
+          src='https://source.unsplash.com/800x800/?login,security,technology'
+          alt='Login Illustration'
+          className='h-full w-full object-cover'
+        />
+      </div>
+      <div className='hidden'>
+        <ToastContainer position='top-center' autoClose={3000} />
+        <div id='recaptcha-container' />
+      </div>
     </div>
   );
 };

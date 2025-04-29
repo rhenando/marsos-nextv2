@@ -5,18 +5,14 @@ import "../i18n";
 
 import { AuthProvider } from "../context/AuthContext";
 import { CartProvider } from "../context/CartContext";
-import {
-  HeaderPaddingProvider,
-  useHeaderPadding,
-} from "@/context/HeaderPaddingContext";
 import { LoadingProvider } from "../context/LoadingContext";
 import { LocalizationProvider } from "../context/LocalizationContext";
 
 import GlobalLoading from "@/components/global/GlobalLoading";
-import Header from "../components/header/Header";
-import StickySearchBar from "../components/header/StickySearchBar";
+import Header from "@/components/header/Header";
+import StickySearchBar from "@/components/header/StickySearchBar";
 import Footer from "@/components/global/Footer";
-import RfqModal from "@/components/rfq/Rfq"; // ✅ imported here
+import RfqModal from "@/components/rfq/Rfq"; // ✅ for global RFQ modal
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -25,8 +21,7 @@ import Lenis from "@studio-freight/lenis";
 
 function AppLayout({ children }) {
   const [showSticky, setShowSticky] = useState(false);
-  const [showRFQModal, setShowRFQModal] = useState(false); // ✅ shared state
-  const { needsPadding } = useHeaderPadding();
+  const [showRFQModal, setShowRFQModal] = useState(false); // ✅ shared RFQ modal state
 
   useEffect(() => {
     const handleScroll = () => {
@@ -64,7 +59,7 @@ function AppLayout({ children }) {
   return (
     <>
       {/* Header or Sticky */}
-      <div className='fixed top-0 left-0 w-full z-[9999] transition-all duration-500 ease-in-out'>
+      <div className='sticky top-0 left-0 w-full z-[9999] transition-all duration-500 ease-in-out'>
         {!showSticky ? (
           <Header setShowRFQModal={setShowRFQModal} />
         ) : (
@@ -72,13 +67,15 @@ function AppLayout({ children }) {
         )}
       </div>
 
-      {/* Main content with dynamic padding */}
-      <div className={needsPadding ? "pt-36" : ""}>
+      {/* Main content with top padding */}
+      <div>
         {children}
+
+        {/* Footer at bottom */}
         <Footer />
       </div>
 
-      {/* ✅ RFQ Modal injected at root level */}
+      {/* Global RFQ Modal */}
       <RfqModal show={showRFQModal} onClose={() => setShowRFQModal(false)} />
 
       <ToastContainer />
@@ -90,14 +87,12 @@ export default function RootProvider({ children }) {
   return (
     <AuthProvider>
       <CartProvider>
-        <HeaderPaddingProvider>
-          <LoadingProvider>
-            <LocalizationProvider>
-              <GlobalLoading />
-              <AppLayout>{children}</AppLayout>
-            </LocalizationProvider>
-          </LoadingProvider>
-        </HeaderPaddingProvider>
+        <LoadingProvider>
+          <LocalizationProvider>
+            <GlobalLoading />
+            <AppLayout>{children}</AppLayout>
+          </LocalizationProvider>
+        </LoadingProvider>
       </CartProvider>
     </AuthProvider>
   );
