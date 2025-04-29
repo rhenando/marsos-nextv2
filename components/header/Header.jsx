@@ -27,12 +27,11 @@ import {
   Home,
 } from "react-feather";
 
-const Header = () => {
+const Header = ({ setShowRFQModal }) => {
   const { cartItemCount, userRole } = useCart();
   const { currentUser, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
-  const [showRFQModal, setShowRFQModal] = useState(false);
 
   const { t } = useTranslation();
 
@@ -304,9 +303,6 @@ const Header = () => {
       <div className='block md:hidden px-4 mt-2'>
         <ProductSearch />
       </div>
-
-      {/* RFQ Modal */}
-      <RfqModal show={showRFQModal} onClose={() => setShowRFQModal(false)} />
     </header>
   );
 };

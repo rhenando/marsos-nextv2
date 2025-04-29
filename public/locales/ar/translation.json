@@ -10,8 +10,8 @@
     "location": "موقعك",
     "home": "الصفحة الرئيسية",
     "all_categories": "جميع الفئات",
-    "featured": "مميز",
-    "trending": "الأكثر تداولاً",
+    "featured": "الاختيارات الميزة",
+    "trending": "المنتجات الشائعة",
     "secured_trading": "تداول آمن",
     "help_center": "مركز المساعدة",
     "become_supplier": "كن مورداً"
@@ -57,7 +57,7 @@
     "unnamed": "منتج بدون اسم"
   },
   "section": {
-    "trending": "Trending Products",
+    "trending": "المنتجات الشائعة",
     "allProducts": "All Products"
   },
   "loading": "Loading...",
@@ -554,5 +554,33 @@
     "of": "من",
     "noProductsFound": "لم يتم العثور على منتجات.",
     "moreFromSupplier": "منتجات أخرى من هذا المورد"
+  },
+
+  "rfq": {
+    "title": "طلب عرض سعر",
+    "category": "فئة المنتج",
+    "subcategory": "الفئة الفرعية للمنتج",
+    "size": "المقاس",
+    "color": "اللون",
+    "shipping": "الشحن إلى",
+    "details": "متطلبات المنتج بالتفصيل",
+    "upload_file": "رفع ملف",
+    "uploading": "جارٍ التحميل...",
+    "file_uploaded": "تم تحميل الملف ✔",
+    "share_contact": "أوافق على مشاركة تفاصيل الاتصال الخاصة بي مع الموردين",
+    "submit": "إرسال طلب عرض السعر",
+    "success_message": "تم إرسال الطلب بنجاح!",
+    "redirecting": "جارٍ التحويل إلى لوحة التحكم...",
+    "errors": {
+      "category_required": "الفئة مطلوبة.",
+      "subcategory_required": "الفئة الفرعية مطلوبة.",
+      "details_required": "تفاصيل المنتج مطلوبة.",
+      "file_required": "يرجى اختيار ملف.",
+      "file_upload_pending": "لم يتم تحميل الملف. يرجى الانتظار أو إعادة التحديد."
+    }
+  },
+  "category": {
+    "category": "الفئة",
+    "noProductsFound": "لم يتم العثور على منتجات."
   }
 }

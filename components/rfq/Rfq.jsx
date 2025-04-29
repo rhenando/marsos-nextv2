@@ -5,6 +5,7 @@ import CreatableSelect from "react-select/creatable";
 import Select from "react-select";
 import { db, storage } from "../../firebase/config";
 import { useAuth } from "../../context/AuthContext";
+import { useTranslation } from "react-i18next";
 import {
   collection,
   getDocs,
@@ -14,13 +15,14 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { useRouter } from "next/navigation"; // ✅ replacing useNavigate
+import { useRouter } from "next/navigation";
 import countryList from "react-select-country-list";
-import { showSuccess, showError, showWarning } from "../../utils/toastUtils"; // adjust if needed
+import { showSuccess, showError, showWarning } from "../../utils/toastUtils";
 
 const RfqModal = ({ show, onClose }) => {
   const { currentUser } = useAuth();
-  const router = useRouter(); // ✅ replacing navigate
+  const { t } = useTranslation();
+  const router = useRouter();
 
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -218,29 +220,28 @@ const RfqModal = ({ show, onClose }) => {
             />
           </svg>
           <h3 className='text-lg text-[#2c6449] font-semibold mt-4'>
-            RFQ submitted successfully!
+            {t("rfq.success_message")}
           </h3>
-          <p className='text-gray-500 text-sm mt-1'>
-            Redirecting to dashboard...
-          </p>
+          <p className='text-gray-500 text-sm mt-1'>{t("rfq.redirecting")}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className='fixed inset-0 bg-[#2c6449]/30 flex items-center justify-center z-50'>
-      <div className='bg-white w-full max-w-4xl rounded-lg shadow-lg overflow-auto max-h-[90vh]'>
+    <div className='fixed inset-0 bg-[#2c6449]/30 z-[9999] flex justify-center overflow-y-auto pt-[90px] px-4 pb-10'>
+      <div className='bg-white w-full max-w-4xl rounded-lg shadow-lg'>
         <div className='flex justify-between items-center p-4 border-b'>
-          <h2 className='text-lg font-semibold'>Request for Quotation</h2>
+          <h2 className='text-lg font-semibold'> {t("rfq.title")} </h2>
           <button onClick={onClose} className='text-gray-600 hover:text-black'>
             ✕
           </button>
         </div>
+
         <form onSubmit={handleSubmit} className='p-4 space-y-4 text-sm'>
           <div className='grid md:grid-cols-2 gap-4'>
             <div>
-              <label className='font-medium'>Product Category *</label>
+              <label className='font-medium'>{t("rfq.category")}</label>
               <Select
                 options={categories}
                 value={selectedCategory}
@@ -254,7 +255,7 @@ const RfqModal = ({ show, onClose }) => {
               )}
             </div>
             <div>
-              <label className='font-medium'>Product Subcategory *</label>
+              <label className='font-medium'>{t("rfq.subcategory")}</label>
               <CreatableSelect
                 options={subcategoryOptions}
                 value={selectedSubcategory}
@@ -274,10 +275,9 @@ const RfqModal = ({ show, onClose }) => {
             </div>
           </div>
 
-          {/* Size, Color, Shipping */}
           <div className='grid md:grid-cols-3 gap-4'>
             <div>
-              <label className='font-medium'>Size</label>
+              <label className='font-medium'>{t("rfq.size")}</label>
               <input
                 type='text'
                 className='w-full border rounded p-2'
@@ -286,7 +286,7 @@ const RfqModal = ({ show, onClose }) => {
               />
             </div>
             <div>
-              <label className='font-medium'>Color</label>
+              <label className='font-medium'>{t("rfq.color")}</label>
               <input
                 type='text'
                 className='w-full border rounded p-2'
@@ -295,7 +295,7 @@ const RfqModal = ({ show, onClose }) => {
               />
             </div>
             <div>
-              <label className='font-medium'>Shipping To</label>
+              <label className='font-medium'>{t("rfq.shipping")}</label>
               <Select
                 options={countryOptions}
                 value={shipping}
@@ -304,11 +304,8 @@ const RfqModal = ({ show, onClose }) => {
             </div>
           </div>
 
-          {/* Details */}
           <div>
-            <label className='font-medium'>
-              Detailed Product Requirements *
-            </label>
+            <label className='font-medium'>{t("rfq.details")}</label>
             <textarea
               className='w-full border rounded p-2'
               rows='3'
@@ -320,9 +317,8 @@ const RfqModal = ({ show, onClose }) => {
             )}
           </div>
 
-          {/* File Upload */}
           <div>
-            <label className='font-medium'>Upload File *</label>
+            <label className='font-medium'>{t("rfq.upload_file")}</label>
             <input
               type='file'
               accept='.jpg,.png,.pdf,.docx'
@@ -342,7 +338,6 @@ const RfqModal = ({ show, onClose }) => {
             )}
           </div>
 
-          {/* Share Business Card */}
           <div className='flex items-center space-x-2'>
             <input
               id='shareBusinessCard'
@@ -352,17 +347,16 @@ const RfqModal = ({ show, onClose }) => {
               className='w-4 h-4'
             />
             <label htmlFor='shareBusinessCard' className='text-sm'>
-              I agree to share my contact details with suppliers
+              {t("rfq.share_contact")}
             </label>
           </div>
 
-          {/* Submit Button */}
           <button
             type='submit'
             disabled={uploading}
             className='bg-[#2c6449] text-white px-4 py-2 rounded hover:bg-opacity-90'
           >
-            {uploading ? "Uploading..." : "Submit RFQ"}
+            {uploading ? "Uploading..." : t("rfq.submit")}
           </button>
         </form>
       </div>

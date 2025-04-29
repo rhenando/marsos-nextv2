@@ -10,8 +10,8 @@
     "location": "Location",
     "home": "Home",
     "all_categories": "All Categories",
-    "featured": "Featured",
-    "trending": "Trending",
+    "featured": "Featured Selections",
+    "trending": "Trending Products",
     "secured_trading": "Secured Trading",
     "help_center": "Help Center",
     "become_supplier": "Become a Supplier"
@@ -540,7 +540,7 @@
     "no_products_found": "No products found in this subcategory."
   },
   "section": {
-    "trending": "Trending",
+    "trending": "Trending Products",
     "allProducts": "All Products",
     "allCategories": "All Categories"
   },
@@ -558,5 +558,32 @@
     "of": "of",
     "noProductsFound": "No products found.",
     "moreFromSupplier": "More products from this supplier"
+  },
+  "rfq": {
+    "title": "Request for Quotation",
+    "category": "Product Category",
+    "subcategory": "Product Subcategory",
+    "size": "Size",
+    "color": "Color",
+    "shipping": "Shipping To",
+    "details": "Detailed Product Requirements",
+    "upload_file": "Upload File",
+    "uploading": "Uploading...",
+    "file_uploaded": "File uploaded ✔",
+    "share_contact": "I agree to share my contact details with suppliers",
+    "submit": "Submit RFQ",
+    "success_message": "RFQ submitted successfully!",
+    "redirecting": "Redirecting to dashboard...",
+    "errors": {
+      "category_required": "Category is required.",
+      "subcategory_required": "Subcategory is required.",
+      "details_required": "Product details are required.",
+      "file_required": "Please select a file.",
+      "file_upload_pending": "File not uploaded. Please wait or reselect."
+    }
+  },
+  "category": {
+    "category": "Category",
+    "noProductsFound": "No products found."
   }
 }
