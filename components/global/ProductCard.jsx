@@ -1,15 +1,17 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { Eye, Mail, Heart } from "react-feather";
 import { getAuth } from "firebase/auth";
 import Currency from "@/components/global/CurrencySymbol";
+import { toast } from "sonner"; // or "react-hot-toast" if you're using that package
 
 const ProductCard = ({ product, locale, currencySymbol, formatNumber }) => {
   const router = useRouter();
   const { t, i18n } = useTranslation();
+  const [isPending, startTransition] = useTransition();
 
   const priceRanges = product.priceRanges || [];
   const prices = priceRanges.map((range) => parseFloat(range.price));
@@ -31,7 +33,9 @@ const ProductCard = ({ product, locale, currencySymbol, formatNumber }) => {
   };
 
   const handleViewProduct = () => {
-    router.push(`/product/${product.id}`);
+    startTransition(() => {
+      router.push(`/product/${product.id}`);
+    });
   };
 
   const handleContactSupplier = () => {
@@ -39,12 +43,12 @@ const ProductCard = ({ product, locale, currencySymbol, formatNumber }) => {
     const currentUser = auth.currentUser;
 
     if (!currentUser) {
-      alert(t("product_card.login_first"));
+      toast.error(t("product_card.login_first"));
       return;
     }
 
     if (!product?.supplierId) {
-      alert(t("product_card.no_supplier"));
+      toast.error(t("product_card.no_supplier"));
       return;
     }
 
@@ -54,8 +58,22 @@ const ProductCard = ({ product, locale, currencySymbol, formatNumber }) => {
     );
   };
 
+  useEffect(() => {
+    // Prefetch the product detail route for snappier navigation
+    router.prefetch(`/product/${product.id}`);
+  }, [product.id, router]);
+
   return (
-    <div className='p-2'>
+    <div className='p-2 relative'>
+      {/* Loading Overlay */}
+      {isPending && (
+        <div className='absolute inset-0 bg-white/70 flex items-center justify-center z-50'>
+          <span className='text-[#2c6449] text-sm font-medium'>
+            {t("product_card.loading")}...
+          </span>
+        </div>
+      )}
+
       <div className='relative group bg-white border rounded-xl shadow hover:shadow-md transition-all flex flex-col overflow-hidden'>
         {/* Wishlist Icon */}
         <div className='absolute top-2 right-2 z-10'>
@@ -138,5 +156,4 @@ const ProductCard = ({ product, locale, currencySymbol, formatNumber }) => {
   );
 };
 
-// ✅ Memoized to prevent unnecessary re-renders
 export default memo(ProductCard);

@@ -72,7 +72,28 @@
     "negotiable": "Pricing Negotiable - Contact Supplier",
     "min_order": "Min. Order: {{minOrder}} pcs",
     "view_details": "View Details",
-    "contact_supplier": "Contact Supplier"
+    "contact_supplier": "Contact Supplier",
+    "description": "Description",
+    "reviews": "Reviews",
+    "no_description": "No description available.",
+    "no_reviews": "No reviews yet.",
+    "category": "Product Category",
+    "pricing": "Pricing",
+    "pcs": "pcs",
+    "unlimited": "Unlimited",
+
+    "quantity": "Quantity",
+    "select_size": "Select Size",
+    "select_color": "Select Color",
+    "choose_option": "Choose an option",
+    "delivery_location": "Delivery Location",
+    "enter_location": "Enter your location",
+    "shipping_cost": "Shipping Cost",
+    "subtotal": "Subtotal",
+    "add_to_cart": "Add to Cart",
+
+    "negotiable_price": "Pricing Negotiable - Contact Supplier",
+    "minimum_qty": "Minimum order quantity is"
   },
 
   "uncategorized": "Uncategorized",

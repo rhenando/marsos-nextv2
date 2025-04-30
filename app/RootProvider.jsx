@@ -12,7 +12,8 @@ import GlobalLoading from "@/components/global/GlobalLoading";
 import Header from "@/components/header/Header";
 import StickySearchBar from "@/components/header/StickySearchBar";
 import Footer from "@/components/global/Footer";
-import RfqModal from "@/components/rfq/Rfq"; // ✅ for global RFQ modal
+import RfqModal from "@/components/rfq/Rfq";
+import { Toaster } from "@/components/ui/sonner"; // or "@/components/ui/toaster" if using original name
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -79,6 +80,7 @@ function AppLayout({ children }) {
       <RfqModal show={showRFQModal} onClose={() => setShowRFQModal(false)} />
 
       <ToastContainer />
+      <Toaster />
     </>
   );
 }

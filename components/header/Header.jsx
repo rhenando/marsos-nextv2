@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
@@ -8,7 +7,6 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 
-import RfqModal from "../rfq/Rfq";
 import ProductSearch from "@/components/header/ProductSearch";
 import LanguageSelector from "@/components/header/LanguageSelector";
 
@@ -30,7 +28,7 @@ import {
 const Header = ({ setShowRFQModal }) => {
   const { cartItemCount, userRole } = useCart();
   const { currentUser, logout } = useAuth();
-  const pathname = usePathname();
+  // const pathname = usePathname();
   const router = useRouter();
 
   const { t } = useTranslation();

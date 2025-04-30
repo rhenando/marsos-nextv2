@@ -1,13 +1,24 @@
-"use client";
-
 import Image from "next/image";
 import sarSymbol from "../../public/sar_symbol.svg";
 
 const Currency = ({ amount, className = "", iconClass = "" }) => {
-  const formattedAmount =
-    typeof amount === "number"
-      ? amount.toFixed(2)
-      : parseFloat(amount || 0).toFixed(2);
+  const numericAmount =
+    typeof amount === "number" ? amount : parseFloat(amount || 0);
+
+  const isValid = !isNaN(numericAmount) && isFinite(numericAmount);
+
+  if (!isValid) {
+    return (
+      <span className='text-yellow-800 text-sm font-medium'>
+        Pricing Negotiable - Contact Supplier
+      </span>
+    );
+  }
+
+  const formattedAmount = new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 5,
+  }).format(numericAmount);
 
   return (
     <span className='inline-flex items-center gap-1'>

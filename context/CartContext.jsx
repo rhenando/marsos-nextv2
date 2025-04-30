@@ -1,20 +1,20 @@
-"use client";
-
 import { createContext, useState, useContext, useEffect } from "react";
 import { doc, onSnapshot, updateDoc, setDoc, getDoc } from "firebase/firestore";
-import { db } from "../firebase/config"; // Adjust path if needed
-import { useAuth } from "./AuthContext"; // Adjust path if needed
+import { db } from "../firebase/config";
+import { useAuth } from "./AuthContext";
 
 const CartContext = createContext();
 
 export const useCart = () => useContext(CartContext);
 
 export const CartProvider = ({ children }) => {
-  const { currentUser, role: userRole } = useAuth();
+  const { currentUser, role: userRole, loading: authLoading } = useAuth(); // ⬅ include loading
   const [cartItems, setCartItems] = useState([]);
   const [cartItemCount, setCartItemCount] = useState(0);
 
   useEffect(() => {
+    if (authLoading) return; // ✅ wait until AuthContext is ready
+
     if (!currentUser || userRole === "admin") {
       setCartItems([]);
       setCartItemCount(0);
@@ -34,7 +34,7 @@ export const CartProvider = ({ children }) => {
     });
 
     return () => unsubscribeCart();
-  }, [currentUser, userRole]);
+  }, [authLoading, currentUser, userRole]);
 
   const isCheckoutDisabled = cartItems.some(
     (item) =>

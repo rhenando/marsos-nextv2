@@ -75,7 +75,28 @@
     "negotiable": "قابل للتفاوض",
     "min_order": "أدنى طلب: {{minOrder}} قطعة",
     "view_details": "عرض التفاصيل",
-    "contact_supplier": "تواصل مع المورد"
+    "contact_supplier": "تواصل مع المورد",
+    "description": "الموقع الرئيسي",
+    "reviews": "Reviews",
+    "no_description": "No description available.",
+    "no_reviews": "No reviews yet.",
+    "category": "Product Category",
+    "pricing": "والأسعار",
+    "pcs": "قطعة",
+    "unlimited": "غير محدود",
+
+    "quantity": "الكمية",
+    "select_size": "الحجم",
+    "select_color": "اللون",
+    "choose_option": "Choose an option",
+    "delivery_location": "مواقع التوصيل",
+    "enter_location": "Enter your location",
+    "shipping_cost": "أسعار الشحن",
+    "subtotal": "المجموع الفرعي ",
+    "add_to_cart": "أضف إلى السلة ",
+
+    "negotiable_price": "Pricing Negotiable - Contact Supplier",
+    "minimum_qty": "Minimum order quantity is"
   },
   "uncategorized": "غير مصنف",
   "sticky": {

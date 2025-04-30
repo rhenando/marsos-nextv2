@@ -17,6 +17,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 
 const UserLogin = () => {
   const router = useRouter();
@@ -94,7 +99,7 @@ const UserLogin = () => {
 
     setLoading(true);
     try {
-      const result = await window.confirmationResult.confirm(otp);
+      await window.confirmationResult.confirm(otp);
       showSuccess("Phone verified!");
     } catch (error) {
       showError("Invalid OTP. Try again.");
@@ -117,15 +122,24 @@ const UserLogin = () => {
           <CardContent className='mt-6 space-y-6'>
             {showOtpScreen ? (
               <>
-                <Input
-                  type='text'
-                  placeholder='Enter OTP'
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                />
+                <div className='flex justify-center'>
+                  <InputOTP
+                    maxLength={6}
+                    value={otp}
+                    onChange={setOtp}
+                    className='mx-auto'
+                  >
+                    <InputOTPGroup>
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <InputOTPSlot key={i} index={i} />
+                      ))}
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
+
                 <Button
                   onClick={handleVerifyOtp}
-                  disabled={loading}
+                  disabled={loading || otp.length < 6}
                   className='w-full bg-[#2c6449] hover:bg-[#24523b]'
                 >
                   {loading ? (
@@ -195,6 +209,8 @@ const UserLogin = () => {
           className='h-full w-full object-cover'
         />
       </div>
+
+      {/* Hidden Toast & Recaptcha containers */}
       <div className='hidden'>
         <ToastContainer position='top-center' autoClose={3000} />
         <div id='recaptcha-container' />
