@@ -10,13 +10,15 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useCartNegotiation } from "@/hooks/useCartNegotiation";
+import { usePlaceOrder } from "@/hooks/usePlaceOrder";
 
 const CartPage = () => {
-  const { removeCartItem, cartItemCount } = useCart(); // removeCartItem must be updated in context
+  const { removeCartItem, cartItemCount } = useCart();
   const [groupedItems, setGroupedItems] = useState({});
   const { currentUser } = useAuth();
   const router = useRouter();
   const { startNegotiation } = useCartNegotiation();
+  const { placeOrder, isPlacing } = usePlaceOrder();
 
   useEffect(() => {
     if (!currentUser) return;
@@ -43,11 +45,11 @@ const CartPage = () => {
     }
 
     const itemRef = doc(db, "carts", currentUser.uid, "items", itemId);
-    const updatedItemSnap = await setDoc(
+    await setDoc(
       itemRef,
       {
         quantity: parseFloat(value),
-        subtotal: parseFloat(value), // The exact price will be overwritten below
+        subtotal: parseFloat(value),
       },
       { merge: true }
     );
@@ -97,7 +99,7 @@ const CartPage = () => {
           Explore our products and add some items!
         </p>
         <Button
-          className='mt-4 bg-[#2c6449] text-white'
+          className='mt-4 bg-[#2c6449] text-white text-sm py-2 px-3'
           onClick={() => router.push("/products")}
         >
           Browse Products
@@ -174,6 +176,7 @@ const CartPage = () => {
                   </div>
                   <Button
                     variant='destructive'
+                    className='text-sm py-2 px-3'
                     onClick={() => removeCartItem(item.id)}
                   >
                     Remove
@@ -205,15 +208,26 @@ const CartPage = () => {
               </div>
 
               <div className='flex flex-col md:flex-row gap-2 w-full md:w-auto'>
-                <Button className='bg-[#2c6449] text-white w-full md:w-auto'>
+                <Button
+                  onClick={() => router.push("/checkout")}
+                  className='bg-[#2c6449] text-white text-sm py-2 px-3 w-full md:w-auto'
+                >
                   Proceed to Checkout
                 </Button>
+
                 <Button
                   variant='outline'
-                  className='text-[#2c6449] border-[#2c6449] w-full md:w-auto'
+                  className='text-[#2c6449] border-[#2c6449] text-sm py-2 px-3 w-full md:w-auto'
                   onClick={() => handleNegotiate(supplierId, items)}
                 >
                   Contact Supplier to Negotiate
+                </Button>
+                <Button
+                  variant='outline'
+                  className='text-sm py-2 px-3 w-full md:w-auto'
+                  onClick={() => router.push("/review-order")}
+                >
+                  Review Order
                 </Button>
               </div>
             </div>
