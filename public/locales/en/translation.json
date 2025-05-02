@@ -81,21 +81,31 @@
     "pricing": "Pricing",
     "pcs": "pcs",
     "unlimited": "Unlimited",
+    "loading": "Loading Product Details",
+
+    "not_found": "Product not found.",
+
+    "negotiable_price": "Pricing Negotiable - Contact Supplier",
 
     "quantity": "Quantity",
+    "minimum_qty": "Minimum quantity is",
     "select_size": "Select Size",
     "select_color": "Select Color",
-    "choose_option": "Choose an option",
     "delivery_location": "Delivery Location",
-    "enter_location": "Enter your location",
+    "choose_option": "Choose an option",
     "shipping_cost": "Shipping Cost",
     "subtotal": "Subtotal",
     "add_to_cart": "Add to Cart",
 
-    "negotiable_price": "Pricing Negotiable - Contact Supplier",
-    "minimum_qty": "Minimum order quantity is"
+    "alert_quantity": "Please enter a valid quantity.",
+    "alert_size": "Please select a size.",
+    "alert_color": "Please select a color.",
+    "alert_location": "Please select a delivery location.",
+    "contact_for_price": "Contact supplier to negotiate the price.",
+    "added_to_cart": "Product added to cart!",
+    "cart_error": "Failed to add item to cart.",
+    "view_cart": "View Cart"
   },
-
   "uncategorized": "Uncategorized",
   "sticky": {
     "products": "Products",

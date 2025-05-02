@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 
-import { useAuth } from "../../context/AuthContext";
-import { useCart } from "../../context/CartContext";
+import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/CartContext";
 
 import ProductSearch from "@/components/header/ProductSearch";
 import LanguageSelector from "@/components/header/LanguageSelector";
@@ -26,11 +26,11 @@ import {
 } from "react-feather";
 
 const Header = ({ setShowRFQModal }) => {
-  const { cartItemCount, userRole } = useCart();
-  const { currentUser, logout } = useAuth();
-  // const pathname = usePathname();
-  const router = useRouter();
+  const { cartItemCount } = useCart();
+  const { currentUser, userData, logout, role: userRole, loading } = useAuth();
 
+  const pathname = usePathname();
+  const router = useRouter();
   const { t } = useTranslation();
 
   const handleLogout = async () => {
@@ -42,10 +42,26 @@ const Header = ({ setShowRFQModal }) => {
     }
   };
 
+  if (loading) {
+    return (
+      <header className='z-50 w-full bg-white shadow'>
+        <div className='p-4 text-center text-sm text-muted-foreground'>
+          {t("header.loading")}
+        </div>
+      </header>
+    );
+  }
+
+  const displayName =
+    userData?.name ||
+    currentUser?.displayName ||
+    currentUser?.email ||
+    t("header.account");
+
   return (
-    <header className='sticky top-0 z-50 w-full bg-white/90 backdrop-blur-md shadow-sm'>
+    <header className='z-50 w-full bg-white/90 backdrop-blur-md shadow-sm'>
       <div className='flex items-center justify-between px-4 md:px-6 py-3'>
-        {/* Left: Logo */}
+        {/* Logo */}
         <Link href='/' className='flex items-center gap-2'>
           <img
             src='/logo.svg'
@@ -59,16 +75,14 @@ const Header = ({ setShowRFQModal }) => {
           <ProductSearch />
         </div>
 
-        {/* Right: Actions */}
+        {/* Desktop Actions */}
         <div className='hidden md:flex items-center gap-4 text-[#2c6449]'>
-          {/* User Menu */}
+          {/* User Dropdown */}
           <Popover>
             <PopoverTrigger asChild>
               <Button variant='ghost' className='flex items-center gap-2'>
                 <User size={18} />
-                <span className='text-sm hidden lg:inline'>
-                  {t("header.account")}
-                </span>
+                <span className='text-sm hidden lg:inline'>{displayName}</span>
               </Button>
             </PopoverTrigger>
             <PopoverContent
@@ -84,9 +98,10 @@ const Header = ({ setShowRFQModal }) => {
                     className='w-full justify-start'
                     onClick={() => {
                       if (userRole === "buyer") router.push("/buyer-dashboard");
-                      if (userRole === "supplier")
+                      else if (userRole === "supplier")
                         router.push("/supplier-dashboard");
-                      if (userRole === "admin") router.push("/admin-dashboard");
+                      else if (userRole === "admin")
+                        router.push("/admin-dashboard");
                     }}
                   >
                     {t("header.dashboard")}
@@ -161,11 +176,10 @@ const Header = ({ setShowRFQModal }) => {
             </Button>
           </Link>
 
-          {/* Language Selector */}
           <LanguageSelector />
         </div>
 
-        {/* Mobile Hamburger */}
+        {/* Mobile Menu */}
         <div className='flex md:hidden'>
           <Sheet>
             <SheetTrigger asChild>
@@ -189,9 +203,9 @@ const Header = ({ setShowRFQModal }) => {
                       onClick={() => {
                         if (userRole === "buyer")
                           router.push("/buyer-dashboard");
-                        if (userRole === "supplier")
+                        else if (userRole === "supplier")
                           router.push("/supplier-dashboard");
-                        if (userRole === "admin")
+                        else if (userRole === "admin")
                           router.push("/admin-dashboard");
                       }}
                     >
@@ -216,44 +230,16 @@ const Header = ({ setShowRFQModal }) => {
                     {t("header.signin")}
                   </Button>
                 )}
-                <Link href='/user-messages'>
-                  <Button variant='ghost' className='w-full justify-start'>
-                    <MessageSquare size={16} className='mr-2' />
-                    {t("header.messages")}
-                  </Button>
-                </Link>
-                {userRole !== "admin" && userRole !== "supplier" && (
-                  <Link href='/cart'>
-                    <Button variant='ghost' className='w-full justify-start'>
-                      <ShoppingCart size={16} className='mr-2' />
-                      {t("header.cart")}
-                    </Button>
-                  </Link>
-                )}
-                <Link href='/basket'>
-                  <Button variant='ghost' className='w-full justify-start'>
-                    <MapPin size={16} className='mr-2' />
-                    {t("header.location")}
-                  </Button>
-                </Link>
-                <Button
-                  variant='outline'
-                  className='w-full justify-start text-[#2c6449] border-[#2c6449]'
-                  onClick={() => setShowRFQModal(true)}
-                >
-                  <Send size={16} className='mr-2' />
-                  {t("header.request_rfq")}
-                </Button>
               </div>
             </SheetContent>
           </Sheet>
         </div>
       </div>
 
-      {/* 🚀 NAVLINKS DIRECTLY BELOW */}
+      {/* Navigation Links */}
       <div className='hidden lg:block w-full bg-white px-6 py-2 text-base text-[#2c6449] border-t border-b border-gray-200'>
         <div className='flex justify-between items-center flex-wrap gap-y-2'>
-          {/* LEFT: Categories and Links */}
+          {/* Left Links */}
           <div className='flex flex-wrap items-center gap-x-6'>
             <Link
               href='/categories'
@@ -275,7 +261,7 @@ const Header = ({ setShowRFQModal }) => {
             </Link>
           </div>
 
-          {/* RIGHT: Support & Actions */}
+          {/* Right Links */}
           <div className='flex flex-wrap items-center gap-x-6'>
             <Link href='/' className='hover:text-[#1b4533] transition-all'>
               {t("header.secured_trading")}

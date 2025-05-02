@@ -17,10 +17,13 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { getLocalizedField } from "@/lib/getLocalizedField";
+import { useCart } from "@/context/CartContext";
+import { toast } from "sonner";
 
 const ProductDetailsPage = () => {
   const { id } = useParams();
   const { t, i18n } = useTranslation();
+  const { addToCart } = useCart();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -157,17 +160,40 @@ const ProductDetailsPage = () => {
 
   const category = product.category || t("uncategorized");
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!quantity || quantity < 1)
-      return alert(t("product_card.alert_quantity"));
+      return toast.error(t("product_card.alert_quantity"));
     if (product.sizes?.length > 0 && !selectedSize)
-      return alert(t("product_card.alert_size"));
+      return toast.error(t("product_card.alert_size"));
     if (product.colors?.length > 0 && !selectedColor)
-      return alert(t("product_card.alert_color"));
+      return toast.error(t("product_card.alert_color"));
     if (!deliveryLocation) return alert(t("product_card.alert_location"));
     if (!hasValidNumericPrice)
-      return alert(t("product_card.contact_for_price"));
-    alert(t("product_card.added_to_cart"));
+      return toast.warning(t("product_card.contact_for_price"));
+
+    const cartItem = {
+      productId: id,
+      productName,
+      productImage: product.mainImageUrl,
+      quantity,
+      size: selectedSize || "",
+      color: selectedColor || "",
+      deliveryLocation,
+      price: matchedPrice,
+      shippingCost,
+      subtotal: quantity * matchedPrice,
+      supplierId: product.supplierId || "",
+      supplierName: product.supplierName || "",
+      currency: "SAR", // or dynamic
+    };
+
+    try {
+      await addToCart(cartItem);
+      toast.success(t("product_card.added_to_cart"));
+    } catch (err) {
+      console.error("🔥 Failed to add to cart", err);
+      toast.error(t("product_card.cart_error", "Failed to add item."));
+    }
   };
 
   return (
@@ -233,7 +259,7 @@ const ProductDetailsPage = () => {
                           <Currency amount={price} />
                         </p>
                       ) : (
-                        <p className='text-sm text-yellow-800 font-medium'>
+                        <p className='text-sm text-lime-700 font-medium'>
                           {t(
                             "product_card.negotiable_price",
                             "Pricing Negotiable - Contact Supplier"
@@ -397,7 +423,7 @@ const ProductDetailsPage = () => {
                 {subtotal !== null ? (
                   <Currency amount={subtotal} />
                 ) : (
-                  <span className='text-yellow-800'>
+                  <span className='text-lime-700'>
                     {t(
                       "product_card.negotiable_price",
                       "Pricing Negotiable - Contact Supplier"
@@ -409,7 +435,7 @@ const ProductDetailsPage = () => {
           )}
 
           {isUnlimitedTier && (
-            <p className='text-yellow-800 text-sm font-medium mt-2'>
+            <p className='text-lime-700 text-sm font-medium mt-2'>
               {t(
                 "product_card.negotiable_price",
                 "Pricing Negotiable - Contact Supplier"

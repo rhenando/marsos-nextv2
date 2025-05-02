@@ -25,7 +25,7 @@ import {
   Home,
 } from "react-feather";
 
-import { useLocalization } from "@/context/LocalizationContext"; // ✅ import context
+import { useLocalization } from "@/context/LocalizationContext";
 
 const StickySearchBar = () => {
   const { cartItemCount, userRole } = useCart();
@@ -34,7 +34,7 @@ const StickySearchBar = () => {
   const router = useRouter();
   const [showRFQModal, setShowRFQModal] = useState(false);
 
-  const { selectedCountry } = useLocalization(); // ✅ only read
+  const { selectedCountry } = useLocalization();
   const { t } = useTranslation();
 
   const handleLogout = async () => {
@@ -56,26 +56,26 @@ const StickySearchBar = () => {
   };
 
   return (
-    <header className='sticky top-0 z-[9999] w-full bg-white/90 backdrop-blur-md shadow-sm'>
-      <div className='flex items-center justify-between px-4 md:px-6 py-3'>
+    <header className='top-0 z-[9999] w-full bg-white/90 backdrop-blur-md shadow-sm'>
+      <div className='flex items-center justify-between px-2 sm:px-4 md:px-6 py-3'>
         {/* Left: Logo */}
         <Link href='/' className='flex items-center gap-2'>
           <img
             src='/logo.svg'
             alt='Company Logo'
-            className='h-20 object-contain'
+            className='h-14 sm:h-16 md:h-20 object-contain'
           />
         </Link>
 
-        {/* Center: Dynamic Product Search */}
-        <div className='flex flex-1 mx-4 max-w-3xl'>
+        {/* Center: Search */}
+        <div className='flex flex-1 mx-2 sm:mx-4 max-w-full sm:max-w-3xl'>
           <ProductSearch />
         </div>
 
-        {/* Right: Actions */}
+        {/* Right: Desktop Icons */}
         <div className='hidden md:flex items-center gap-4 text-[#2c6449]'>
-          {/* Delivery Location Display */}
-          <div className='text-xs flex flex-col items-center'>
+          {/* Delivery Location */}
+          <div className='text-xs flex-col items-center hidden md:flex'>
             <span>{t("sticky.delivery_to")}</span>
             <span className='flex items-center gap-1'>
               <img
@@ -143,7 +143,7 @@ const StickySearchBar = () => {
                 <ShoppingCart size={22} />
               </Button>
               {cartItemCount > 0 && (
-                <span className='absolute -top-1 -right-1 bg-[#2c6449] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center'>
+                <span className='absolute -top-1 -right-1 bg-[#2c6449] text-white text-[10px] min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-center'>
                   {cartItemCount}
                 </span>
               )}
@@ -160,7 +160,7 @@ const StickySearchBar = () => {
             <Send size={20} />
           </Button>
 
-          {/* Location Link */}
+          {/* Location */}
           <Link href='/basket'>
             <Button variant='ghost' className='flex items-center gap-2'>
               <MapPin size={22} />
@@ -168,7 +168,7 @@ const StickySearchBar = () => {
           </Link>
         </div>
 
-        {/* Mobile Hamburger */}
+        {/* Mobile: Hamburger Menu */}
         <div className='flex md:hidden'>
           <Sheet>
             <SheetTrigger asChild>
@@ -176,8 +176,8 @@ const StickySearchBar = () => {
                 <Menu size={24} />
               </Button>
             </SheetTrigger>
-            <SheetContent side='left' className='w-64'>
-              <div className='flex flex-col gap-4 mt-4 text-[#2c6449]'>
+            <SheetContent side='left' className='w-64 max-w-[90vw]'>
+              <div className='flex flex-col gap-4 mt-4 px-2 text-[#2c6449]'>
                 <Link href='/'>
                   <Button variant='ghost' className='w-full justify-start'>
                     <Home size={20} className='mr-2' />

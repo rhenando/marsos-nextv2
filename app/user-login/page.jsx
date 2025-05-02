@@ -1,21 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-  onAuthStateChanged,
-} from "firebase/auth";
-import { db, auth } from "@/firebase/config";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+import { auth, db } from "@/firebase/config";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { toast } from "sonner";
 
-import { showSuccess, showError } from "@/utils/toastUtils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
   InputOTP,
@@ -23,33 +16,20 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 
-const UserLogin = () => {
+export default function AuthPage() {
   const router = useRouter();
+
   const [countryCode, setCountryCode] = useState("+966");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showOtpScreen, setShowOtpScreen] = useState(false);
+  const [stage, setStage] = useState("phone"); // phone | otp | register
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const usersRef = collection(db, "users");
-        const q = query(usersRef, where("uid", "==", user.uid));
-        const querySnapshot = await getDocs(q);
+  const [userId, setUserId] = useState("");
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("buyer");
 
-        if (!querySnapshot.empty) {
-          const userData = querySnapshot.docs[0].data();
-          const role = userData.role || "buyer";
-          router.push(role === "buyer" ? "/" : "/supplier-dashboard");
-        } else {
-          router.push("/register");
-        }
-      }
-    });
-
-    return () => unsubscribe();
-  }, [router]);
+  const fullPhoneNumber = `${countryCode}${phone}`;
 
   const setupRecaptcha = () => {
     if (!window.recaptchaVerifier) {
@@ -66,14 +46,13 @@ const UserLogin = () => {
 
   const handleSendOtp = async () => {
     if (!phone || phone.length < 7) {
-      showError("Enter a valid phone number.");
+      toast.error("Enter a valid phone number.");
       return;
     }
 
     setLoading(true);
     setupRecaptcha();
     const appVerifier = window.recaptchaVerifier;
-    const fullPhoneNumber = `${countryCode}${phone}`;
 
     try {
       const confirmationResult = await signInWithPhoneNumber(
@@ -82,76 +61,87 @@ const UserLogin = () => {
         appVerifier
       );
       window.confirmationResult = confirmationResult;
-      showSuccess("OTP sent!");
-      setShowOtpScreen(true);
-    } catch (error) {
-      showError("Failed to send OTP. Try again.");
+      toast.success("OTP sent!");
+      setStage("otp");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to send OTP.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleVerifyOtp = async () => {
-    if (!otp || otp.length < 6) {
-      showError("Enter the 6-digit OTP.");
+    if (otp.length < 6) {
+      toast.error("Enter the 6-digit OTP.");
       return;
     }
 
     setLoading(true);
     try {
-      await window.confirmationResult.confirm(otp);
-      showSuccess("Phone verified!");
-    } catch (error) {
-      showError("Invalid OTP. Try again.");
+      const result = await window.confirmationResult.confirm(otp);
+      const user = result.user;
+      setUserId(user.uid);
+
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        toast.success("Welcome back!");
+        router.push(userData.role === "supplier" ? "/supplier-dashboard" : "/");
+      } else {
+        setStage("register");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Invalid OTP.");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleRegister = async () => {
+    if (!name.trim()) {
+      toast.error("Please enter your name.");
+      return;
+    }
+
+    try {
+      await setDoc(doc(db, "users", userId), {
+        uid: userId,
+        name,
+        phone: fullPhoneNumber,
+        role,
+        createdAt: new Date(),
+      });
+
+      toast.success("Account created!");
+      router.push(role === "supplier" ? "/supplier-dashboard" : "/");
+    } catch (err) {
+      console.error(err);
+      toast.error("Error saving user data.");
+    }
+  };
+
   return (
     <div className='w-full lg:grid lg:min-h-screen lg:grid-cols-2'>
-      {/* Left Side: Form */}
-      <div className='flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-white'>
+      {/* Left Side */}
+      <div className='flex items-center justify-center px-4 py-12 bg-white'>
         <Card className='w-full max-w-md shadow-xl rounded-xl p-6'>
           <CardHeader>
-            <CardTitle className='text-center text-3xl text-[#2c6449]'>
-              {showOtpScreen ? "Enter OTP" : "Login with Phone"}
+            <CardTitle className='text-center text-2xl text-[#2c6449]'>
+              {stage === "phone"
+                ? "Login or Register"
+                : stage === "otp"
+                ? "Enter OTP"
+                : "Complete Profile"}
             </CardTitle>
           </CardHeader>
 
           <CardContent className='mt-6 space-y-6'>
-            {showOtpScreen ? (
+            {stage === "phone" && (
               <>
-                <div className='flex justify-center'>
-                  <InputOTP
-                    maxLength={6}
-                    value={otp}
-                    onChange={setOtp}
-                    className='mx-auto'
-                  >
-                    <InputOTPGroup>
-                      {Array.from({ length: 6 }).map((_, i) => (
-                        <InputOTPSlot key={i} index={i} />
-                      ))}
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
-
-                <Button
-                  onClick={handleVerifyOtp}
-                  disabled={loading || otp.length < 6}
-                  className='w-full bg-[#2c6449] hover:bg-[#24523b]'
-                >
-                  {loading ? (
-                    <Loader2 className='animate-spin w-5 h-5' />
-                  ) : (
-                    "Verify OTP"
-                  )}
-                </Button>
-              </>
-            ) : (
-              <>
-                <div className='flex items-center gap-2'>
+                <div className='flex gap-2'>
                   <select
                     value={countryCode}
                     onChange={(e) => setCountryCode(e.target.value)}
@@ -159,10 +149,6 @@ const UserLogin = () => {
                   >
                     <option value='+966'>🇸🇦 +966</option>
                     <option value='+971'>🇦🇪 +971</option>
-                    <option value='+965'>🇰🇼 +965</option>
-                    <option value='+973'>🇧🇭 +973</option>
-                    <option value='+968'>🇴🇲 +968</option>
-                    <option value='+974'>🇶🇦 +974</option>
                   </select>
                   <Input
                     type='tel'
@@ -173,50 +159,84 @@ const UserLogin = () => {
                     }
                   />
                 </div>
-
                 <Button
                   onClick={handleSendOtp}
                   disabled={loading}
                   className='w-full bg-[#2c6449] hover:bg-[#24523b]'
                 >
-                  {loading ? (
-                    <Loader2 className='animate-spin w-5 h-5' />
-                  ) : (
-                    "Send OTP"
-                  )}
+                  {loading ? "Sending..." : "Send OTP"}
                 </Button>
               </>
             )}
 
-            <p className='text-center text-sm text-gray-500'>
-              Don’t have an account?{" "}
-              <a
-                href='/register'
-                className='font-medium text-[#2c6449] hover:underline'
-              >
-                Sign up
-              </a>
-            </p>
+            {stage === "otp" && (
+              <>
+                <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+                  <InputOTPGroup>
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <InputOTPSlot key={i} index={i} />
+                    ))}
+                  </InputOTPGroup>
+                </InputOTP>
+                <Button
+                  onClick={handleVerifyOtp}
+                  disabled={loading}
+                  className='w-full bg-[#2c6449] hover:bg-[#24523b]'
+                >
+                  {loading ? "Verifying..." : "Verify OTP"}
+                </Button>
+              </>
+            )}
+
+            {stage === "register" && (
+              <>
+                <Input
+                  placeholder='Full Name'
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+
+                <div className='flex gap-2'>
+                  <Button
+                    variant={role === "buyer" ? "default" : "outline"}
+                    onClick={() => setRole("buyer")}
+                    className='flex-1'
+                  >
+                    Buyer
+                  </Button>
+                  <Button
+                    variant={role === "supplier" ? "default" : "outline"}
+                    onClick={() => setRole("supplier")}
+                    className='flex-1'
+                  >
+                    Supplier
+                  </Button>
+                </div>
+
+                <Button
+                  onClick={handleRegister}
+                  disabled={loading}
+                  className='w-full bg-[#2c6449] hover:bg-[#24523b]'
+                >
+                  {loading ? "Saving..." : "Create Account"}
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Right Side: Image */}
+      {/* Right Side Illustration */}
       <div className='hidden lg:block bg-muted'>
         <img
-          src='https://source.unsplash.com/800x800/?login,security,technology'
+          src='https://source.unsplash.com/800x800/?commerce,login'
           alt='Login Illustration'
           className='h-full w-full object-cover'
         />
       </div>
 
-      {/* Hidden Toast & Recaptcha containers */}
-      <div className='hidden'>
-        <ToastContainer position='top-center' autoClose={3000} />
-        <div id='recaptcha-container' />
-      </div>
+      {/* Recaptcha container */}
+      <div id='recaptcha-container' />
     </div>
   );
-};
-
-export default UserLogin;
+}

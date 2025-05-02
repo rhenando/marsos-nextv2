@@ -84,6 +84,7 @@
     "pricing": "والأسعار",
     "pcs": "قطعة",
     "unlimited": "غير محدود",
+    "loading": "Loading Product Details",
 
     "quantity": "الكمية",
     "select_size": "الحجم",
@@ -96,8 +97,20 @@
     "add_to_cart": "أضف إلى السلة ",
 
     "negotiable_price": "Pricing Negotiable - Contact Supplier",
-    "minimum_qty": "Minimum order quantity is"
+    "minimum_qty": "Minimum order quantity is",
+
+    "not_found": "لم يتم العثور على المنتج.",
+
+    "alert_quantity": "يرجى إدخال كمية صحيحة.",
+    "alert_size": "يرجى اختيار المقاس.",
+    "alert_color": "يرجى اختيار اللون.",
+    "alert_location": "يرجى اختيار مكان التوصيل.",
+    "contact_for_price": "يرجى التواصل مع المورد لتحديد السعر.",
+    "added_to_cart": "تمت إضافة المنتج إلى السلة!",
+    "cart_error": "فشل في إضافة المنتج إلى السلة.",
+    "view_cart": "عرض السلة"
   },
+
   "uncategorized": "غير مصنف",
   "sticky": {
     "products": "منتجات",

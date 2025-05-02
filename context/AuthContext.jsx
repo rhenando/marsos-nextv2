@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
-import { auth, db } from "../firebase/config"; // adjust if needed
+import { auth, db } from "../firebase/config";
 import { onAuthStateChanged, onIdTokenChanged, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
@@ -17,50 +17,51 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [intendedRoute, setIntendedRoute] = useState(null);
 
-  const router = useRouter(); // ✅ useRouter instead of useNavigate
+  const router = useRouter();
+
+  // ✅ Wrapped into a proper async function
+  async function setUserAndRole(user) {
+    try {
+      setCurrentUser(user);
+
+      if (user) {
+        const idToken = await user.getIdToken();
+        setToken(idToken);
+
+        const docRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const userData = docSnap.data();
+          setUserData(userData);
+          setRole(userData.role);
+        } else {
+          console.warn("No user document found.");
+          setUserData({ role: "guest" });
+          setRole("guest");
+        }
+
+        if (intendedRoute) {
+          router.push(intendedRoute);
+          setIntendedRoute(null);
+        }
+      } else {
+        setCurrentUser(null);
+        setUserData(null);
+        setRole(null);
+        setToken(null);
+      }
+    } catch (error) {
+      console.error("Error setting user:", error);
+    } finally {
+      setLoading(false); // ✅ Moved here for accuracy
+    }
+  }
 
   useEffect(() => {
-    const setUserAndRole = async (user) => {
-      try {
-        setCurrentUser(user);
-
-        if (user) {
-          const idToken = await user.getIdToken();
-          setToken(idToken);
-
-          const docRef = doc(db, "users", user.uid);
-          const docSnap = await getDoc(docRef);
-
-          if (docSnap.exists()) {
-            const userData = docSnap.data();
-            setUserData(userData);
-            setRole(userData.role);
-          } else {
-            console.warn("No user document found.");
-            setUserData({ role: "guest" });
-            setRole("guest");
-          }
-
-          if (intendedRoute) {
-            router.push(intendedRoute);
-            setIntendedRoute(null);
-          }
-        } else {
-          setCurrentUser(null);
-          setUserData(null);
-          setRole(null);
-          setToken(null);
-        }
-      } catch (error) {
-        console.error("Error setting user:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      setLoading(true);
-      setUserAndRole(user);
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      setLoading(true); // ✅ Mark as loading
+      await setUserAndRole(user); // ✅ Wait for everything
     });
 
     const unsubscribeToken = onIdTokenChanged(auth, async (user) => {
@@ -102,18 +103,20 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await signOut(auth);
-      localStorage.setItem("logout", Date.now()); // for cross-tab logout sync
+      localStorage.setItem("logout", Date.now()); // 🔁 sync across tabs
 
       setCurrentUser(null);
       setUserData(null);
       setRole(null);
       setToken(null);
 
-      if (role === "admin") {
-        router.push("/admin-login");
-      } else {
-        router.push("/user-login");
+      // ✅ Clean up any reCAPTCHA instances
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+        delete window.recaptchaVerifier;
       }
+
+      router.push("/user-login");
     } catch (error) {
       console.error("Logout error:", error);
     }

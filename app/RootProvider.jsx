@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import "../i18n";
 
-import { AuthProvider } from "../context/AuthContext";
+import { AuthProvider, useAuth } from "../context/AuthContext";
 import { CartProvider } from "../context/CartContext";
 import { LoadingProvider } from "../context/LoadingContext";
 import { LocalizationProvider } from "../context/LocalizationContext";
@@ -13,30 +13,35 @@ import Header from "@/components/header/Header";
 import StickySearchBar from "@/components/header/StickySearchBar";
 import Footer from "@/components/global/Footer";
 import RfqModal from "@/components/rfq/Rfq";
-import { Toaster } from "@/components/ui/sonner"; // or "@/components/ui/toaster" if using original name
-
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { Toaster } from "@/components/ui/sonner";
 
 import Lenis from "@studio-freight/lenis";
+import { AnimatePresence, motion } from "framer-motion";
 
 function AppLayout({ children }) {
+  const { loading } = useAuth(); // ✅ Get loading state from AuthContext
   const [showSticky, setShowSticky] = useState(false);
-  const [showRFQModal, setShowRFQModal] = useState(false); // ✅ shared RFQ modal state
+  const [showRFQModal, setShowRFQModal] = useState(false);
 
+  // ✨ Gate rendering until auth is ready
+  if (loading) {
+    return (
+      <div className='min-h-screen flex items-center justify-center'>
+        <span className='text-muted-foreground text-sm'>Loading...</span>
+      </div>
+    );
+  }
+
+  // Scroll listener for sticky
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 100) {
-        setShowSticky(true);
-      } else {
-        setShowSticky(false);
-      }
+      setShowSticky(window.scrollY > 100);
     };
-
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Smooth scroll
   useEffect(() => {
     const lenis = new Lenis({
       duration: 1.2,
@@ -45,46 +50,60 @@ function AppLayout({ children }) {
       smoothTouch: false,
     });
 
-    function raf(time) {
+    const raf = (time) => {
       lenis.raf(time);
       requestAnimationFrame(raf);
-    }
+    };
 
     requestAnimationFrame(raf);
-
-    return () => {
-      lenis.destroy();
-    };
+    return () => lenis.destroy();
   }, []);
 
   return (
     <>
-      {/* Header or Sticky */}
-      <div className='sticky top-0 left-0 w-full z-[9999] transition-all duration-500 ease-in-out'>
+      {/* Header or StickySearchBar */}
+      <AnimatePresence mode='wait'>
         {!showSticky ? (
-          <Header setShowRFQModal={setShowRFQModal} />
+          <motion.div
+            key='header'
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            className='z-[9999]'
+          >
+            <Header setShowRFQModal={setShowRFQModal} />
+          </motion.div>
         ) : (
-          <StickySearchBar />
+          <motion.div
+            key='sticky'
+            initial={{ y: -100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -100, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className='sticky top-0 z-[9999]'
+          >
+            <StickySearchBar />
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
 
-      {/* Main content with top padding */}
-      <div>
-        {children}
+      {/* Main content */}
+      <div>{children}</div>
 
-        {/* Footer at bottom */}
-        <Footer />
-      </div>
+      {/* Footer */}
+      <Footer />
 
-      {/* Global RFQ Modal */}
+      {/* RFQ Modal */}
       <RfqModal show={showRFQModal} onClose={() => setShowRFQModal(false)} />
 
-      <ToastContainer />
-      <Toaster />
+      {/* Toaster */}
+      <Toaster richColors position='top-center' />
     </>
   );
 }
 
+// RootProvider wraps all app contexts
 export default function RootProvider({ children }) {
   return (
     <AuthProvider>

@@ -3,57 +3,55 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { DollarSign, Users, CreditCard, Activity } from "lucide-react";
 
-export default function SupplierDashboardPage() {
+export default function AdminDashboardPage() {
   return (
     <>
-      <h1 className='text-2xl font-bold mb-6'>Supplier Dashboard</h1>
+      <h1 className='text-2xl font-bold mb-6'>Dashboard Overview</h1>
 
       <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
         <Card>
           <CardHeader className='flex justify-between items-center'>
-            <CardTitle className='text-sm'>Total Sales</CardTitle>
+            <CardTitle className='text-sm'>Total Revenue</CardTitle>
             <DollarSign className='h-4 w-4 text-muted-foreground' />
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>$7,920</div>
+            <div className='text-2xl font-bold'>$12,450</div>
             <p className='text-sm text-muted-foreground'>
-              +12.4% from last month
+              +18.2% from last month
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className='flex justify-between items-center'>
-            <CardTitle className='text-sm'>RFQs Received</CardTitle>
+            <CardTitle className='text-sm'>Active Users</CardTitle>
             <Users className='h-4 w-4 text-muted-foreground' />
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>142</div>
-            <p className='text-sm text-muted-foreground'>+5.2% this week</p>
+            <div className='text-2xl font-bold'>2,301</div>
+            <p className='text-sm text-muted-foreground'>+3.1% this week</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className='flex justify-between items-center'>
-            <CardTitle className='text-sm'>Completed Orders</CardTitle>
+            <CardTitle className='text-sm'>Transactions</CardTitle>
             <CreditCard className='h-4 w-4 text-muted-foreground' />
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>79</div>
-            <p className='text-sm text-muted-foreground'>+8.7% this month</p>
+            <div className='text-2xl font-bold'>845</div>
+            <p className='text-sm text-muted-foreground'>+12% from yesterday</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className='flex justify-between items-center'>
-            <CardTitle className='text-sm'>Response Rate</CardTitle>
+            <CardTitle className='text-sm'>Analytics</CardTitle>
             <Activity className='h-4 w-4 text-muted-foreground' />
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>92%</div>
-            <p className='text-sm text-muted-foreground'>
-              Compared to last week
-            </p>
+            <div className='text-2xl font-bold'>68%</div>
+            <p className='text-sm text-muted-foreground'>Stable</p>
           </CardContent>
         </Card>
       </div>

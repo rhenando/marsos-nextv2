@@ -1,386 +1,188 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
-import {
-  doc,
-  updateDoc,
-  getDoc,
-  setDoc,
-  serverTimestamp,
-  collection,
-  getDocs,
-} from "firebase/firestore";
-import { db } from "@/firebase/config";
-import { useTranslation } from "react-i18next";
-import Currency from "@/components/global/CurrencySymbol";
-import ReviewOrderModal from "@/components/review-order/ReviewOrder";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import Currency from "@/components/global/CurrencySymbol";
+import { db } from "@/firebase/config";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
-export default function CartPage() {
+const CartPage = () => {
+  const { cartItems, removeCartItem, cartItemCount } = useCart();
+  const [groupedItems, setGroupedItems] = useState({});
   const { currentUser } = useAuth();
   const router = useRouter();
-  const { t } = useTranslation();
-
-  const [selectedSupplierId, setSelectedSupplierId] = useState(null);
-  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-  const [showCouponInput, setShowCouponInput] = useState(false);
-  const [couponCode, setCouponCode] = useState("");
-  const [discount, setDiscount] = useState(0);
-  const { cartItems, setCartItems, isCheckoutDisabled } = useCart();
-  const [supplierNames, setSupplierNames] = useState({});
-
-  const showNotification = (type, message) => {
-    if (type === "success") toast.success(message);
-    else toast.error(message);
-  };
 
   useEffect(() => {
-    const fetchSupplierNames = async () => {
-      try {
-        const snapshot = await getDocs(collection(db, "users"));
-        const namesMap = {};
-        snapshot.forEach((doc) => {
-          const user = doc.data();
-          if (user.role === "supplier") {
-            namesMap[doc.id] =
-              user.displayName || user.name || "Unnamed Supplier";
-          }
-        });
-        setSupplierNames(namesMap);
-      } catch (error) {
-        console.error("Error fetching supplier names:", error);
-      }
-    };
-    fetchSupplierNames();
-  }, []);
+    const grouped = cartItems.reduce((acc, item) => {
+      const key = item.supplierId || "unknown";
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+      return acc;
+    }, {});
+    setGroupedItems(grouped);
+  }, [cartItems]);
 
-  const groupedBySupplier = cartItems.reduce((groups, item) => {
-    const supplierId = item.supplierId;
-    if (!groups[supplierId]) groups[supplierId] = [];
-    groups[supplierId].push(item);
-    return groups;
-  }, {});
+  const handleNegotiate = async (supplierId, items) => {
+    if (!currentUser) return toast.error("Please login to negotiate.");
 
-  const safeValue = (val) => (isNaN(val) || val === null ? 0 : val);
-
-  const handleQuantityChange = (cartId, change) => {
-    setCartItems((prev) =>
-      prev.map((item) =>
-        item.cartId === cartId
-          ? { ...item, quantity: Math.max(1, item.quantity + change) }
-          : item
-      )
-    );
-  };
-
-  const handleQuantityManualChange = (cartId, value) => {
-    setCartItems((prev) =>
-      prev.map((item) =>
-        item.cartId === cartId
-          ? { ...item, tempQuantity: value.replace(/\D/g, "") }
-          : item
-      )
-    );
-  };
-
-  const handleQuantityBlur = (cartId) => {
-    setCartItems((prev) =>
-      prev.map((item) =>
-        item.cartId === cartId
-          ? {
-              ...item,
-              quantity:
-                item.tempQuantity === "" || item.tempQuantity === undefined
-                  ? item.quantity
-                  : parseInt(item.tempQuantity, 10),
-              tempQuantity: undefined,
-            }
-          : item
-      )
-    );
-  };
-
-  const handleRemoveItem = async (cartId) => {
-    const updatedItems = cartItems.filter((item) => item.cartId !== cartId);
-    setCartItems(updatedItems);
-    try {
-      await updateDoc(doc(db, "carts", currentUser.uid), {
-        items: updatedItems,
-      });
-      showNotification("success", "Item successfully removed.");
-    } catch {
-      showNotification("error", "Failed to update cart.");
-    }
-  };
-
-  const handleApplyCoupon = () => {
-    const validCoupons = { DISCOUNT10: 10, SAVE20: 20 };
-    if (validCoupons[couponCode]) {
-      setDiscount(validCoupons[couponCode]);
-      showNotification("success", `You saved SR ${validCoupons[couponCode]}!`);
-    } else {
-      setDiscount(0);
-      showNotification("error", "This code is not valid.");
-    }
-    setCouponCode("");
-    setShowCouponInput(false);
-  };
-
-  const handleContactSupplier = async (supplierId, items) => {
-    if (!currentUser) return router.push("/user-login");
-    const chatDocId = `chat_${currentUser.uid}_${supplierId}_CART`;
-    const chatRef = doc(db, "cartChats", chatDocId);
+    const chatId = `cart_${currentUser.uid}_${supplierId}`;
+    const chatRef = doc(db, "cartChats", chatId);
 
     try {
-      const chatSnapshot = await getDoc(chatRef);
-      const buyerName = currentUser.displayName || "Unknown Buyer";
-      if (chatSnapshot.exists()) {
-        await updateDoc(chatRef, { cartItems: items });
-      } else {
+      const existingChat = await getDoc(chatRef);
+
+      if (!existingChat.exists()) {
         await setDoc(chatRef, {
-          chatId: chatDocId,
           buyerId: currentUser.uid,
-          buyerName,
           supplierId,
-          cartItems: items,
-          messages: [],
-          createdAt: serverTimestamp(),
+          createdAt: new Date(),
+          status: "pending",
+          cartSnapshot: items.map((item) => ({
+            productId: item.productId,
+            productName: item.productName,
+            quantity: item.quantity,
+            size: item.size,
+            color: item.color,
+            deliveryLocation: item.deliveryLocation,
+            originalPrice: item.price,
+            originalSubtotal: item.subtotal,
+          })),
         });
       }
-      router.push(`/cart-chat/${chatDocId}`);
-    } catch (error) {
-      showNotification("error", "Failed to contact supplier.");
+
+      router.push(`/chat/cart/${chatId}`);
+    } catch (err) {
+      console.error("❌ Negotiation chat error:", err);
+      toast.error("Failed to initiate negotiation.");
     }
   };
 
-  const handleReviewOrder = (supplierId) => {
-    if (!supplierId)
-      return showNotification("error", "Supplier ID is missing.");
-    setSelectedSupplierId(supplierId);
-    setIsReviewModalOpen(true);
-  };
-
-  if (!cartItems.length)
+  if (cartItemCount === 0) {
     return (
-      <p className='text-center text-muted-foreground py-10'>
-        {t("cart.emptyMessage")}
-      </p>
+      <div className='text-center py-12'>
+        <h2 className='text-xl font-semibold text-gray-600'>
+          Your cart is empty 🛒
+        </h2>
+      </div>
     );
+  }
 
   return (
-    <div className='max-w-7xl mx-auto px-4 py-6'>
-      <h2 className='text-lg font-semibold text-center mb-6'>
-        Your Cart ({cartItems.length} items)
-      </h2>
+    <div className='max-w-6xl mx-auto px-4 py-10'>
+      <h1 className='text-2xl font-bold mb-6 text-[#2c6449]'>Your Cart</h1>
 
-      {Object.entries(groupedBySupplier).map(([supplierId, items]) => {
-        const supplierSubtotal = items.reduce(
-          (sum, item) => sum + safeValue(item.price) * safeValue(item.quantity),
+      {Object.entries(groupedItems).map(([supplierId, items]) => {
+        const supplierName = items[0].supplierName || "Unknown Supplier";
+        const subtotal = items.reduce(
+          (sum, item) => sum + (item.subtotal || 0),
           0
         );
-        const supplierShipping = items.reduce(
-          (sum, item) => sum + safeValue(item.shippingCost),
+        const shipping = items.reduce(
+          (sum, item) => sum + (item.shippingCost || 0),
           0
         );
-        const supplierTax = (supplierSubtotal + supplierShipping) * 0.15;
-        const supplierTotal =
-          supplierSubtotal + supplierShipping + supplierTax - discount;
+        const vat = (subtotal + shipping) * 0.15;
+        const total = subtotal + shipping + vat;
 
         return (
-          <div key={supplierId} className='mb-10'>
-            <h3 className='font-bold text-sm text-gray-800 mb-3'>
-              Supplier: {supplierNames[supplierId] || supplierId}
-            </h3>
+          <div
+            key={supplierId}
+            className='border rounded-xl shadow-sm mb-10 p-6 bg-white'
+          >
+            <h2 className='text-lg font-semibold mb-4 text-[#2c6449]'>
+              Supplier: {supplierName}
+            </h2>
 
-            {/* --- Mobile View Cards --- */}
-            <div className='md:hidden space-y-4'>
+            <div className='space-y-6'>
               {items.map((item) => (
                 <div
-                  key={item.cartId}
-                  className='border rounded p-4 shadow-sm bg-white'
+                  key={item.id}
+                  className='flex flex-col md:flex-row gap-4 items-center border-b pb-4'
                 >
-                  <div className='flex gap-3 mb-2'>
-                    <img
-                      src={
-                        item.mainImageUrl || "https://via.placeholder.com/60"
-                      }
-                      alt={item.name}
-                      className='w-16 h-16 object-cover rounded'
-                    />
-                    <div>
-                      <p className='font-semibold capitalize'>{item.name}</p>
-                      <p className='text-xs text-gray-500'>
-                        Size: {item.size} | Color: {item.color}
+                  <img
+                    src={item.productImage || "https://via.placeholder.com/100"}
+                    alt={item.productName}
+                    className='w-24 h-24 object-cover rounded border'
+                  />
+                  <div className='flex-1'>
+                    <h3 className='font-semibold text-gray-800'>
+                      {item.productName}
+                    </h3>
+                    <p className='text-sm text-gray-600'>
+                      Qty: {item.quantity} × <Currency amount={item.price} />
+                    </p>
+                    <p className='text-sm text-gray-500'>
+                      Size: {item.size || "—"} | Color: {item.color || "—"} |{" "}
+                      Location: {item.deliveryLocation}
+                    </p>
+                    {item.negotiated && (
+                      <p className='text-xs text-green-600 mt-1'>
+                        Negotiated Price ✅
                       </p>
-                    </div>
-                  </div>
-                  <p className='text-sm'>
-                    Price: <Currency amount={safeValue(item.price)} />
-                  </p>
-                  <p className='text-sm'>
-                    Shipping: <Currency amount={safeValue(item.shippingCost)} />
-                  </p>
-                  <p className='text-sm'>
-                    Total:{" "}
-                    {isNaN(item.price * item.quantity) ? (
-                      <span
-                        className='text-red-600 underline cursor-pointer'
-                        onClick={() =>
-                          handleContactSupplier(item.supplierId, [item])
-                        }
-                      >
-                        Contact Supplier
-                      </span>
-                    ) : (
-                      <Currency amount={item.price * item.quantity} />
                     )}
-                  </p>
-                  <div className='flex items-center gap-2 mt-3'>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => handleQuantityChange(item.cartId, -1)}
-                    >
-                      -
-                    </Button>
-                    <Input
-                      className='w-12 text-center'
-                      value={item.tempQuantity ?? item.quantity}
-                      onChange={(e) =>
-                        handleQuantityManualChange(item.cartId, e.target.value)
-                      }
-                      onBlur={() => handleQuantityBlur(item.cartId)}
-                    />
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => handleQuantityChange(item.cartId, 1)}
-                    >
-                      +
-                    </Button>
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      className='text-red-500 ml-auto px-2'
-                      onClick={() => handleRemoveItem(item.cartId)}
-                    >
-                      ✕
-                    </Button>
+                    <p className='text-sm font-medium text-[#2c6449] mt-1'>
+                      Subtotal: <Currency amount={item.subtotal} />
+                    </p>
                   </div>
+                  <Button
+                    variant='destructive'
+                    onClick={() => removeCartItem(item.id)}
+                  >
+                    Remove
+                  </Button>
                 </div>
               ))}
             </div>
 
-            {/* --- Shared Summary Section --- */}
-            <div className='mt-4 border rounded p-4 text-sm bg-gray-50'>
-              <div className='flex justify-between mb-1'>
-                <span>Subtotal</span>
-                <span>
-                  <Currency amount={supplierSubtotal} />
-                </span>
-              </div>
-              <div className='flex justify-between mb-1'>
-                <span>Shipping</span>
-                <Currency amount={supplierShipping} />
-              </div>
-              <div className='flex justify-between mb-1'>
-                <span>VAT (15%)</span>
-                <Currency amount={supplierTax} />
-              </div>
-              <div className='flex justify-between mb-1'>
-                <span>Discount</span>
-                <span>
-                  - <Currency amount={discount} />
-                </span>
-              </div>
-              <div className='flex justify-between font-semibold text-base mt-2'>
-                <span>Total</span>
-                <span>
-                  {supplierTotal > 0 ? (
-                    <Currency amount={supplierTotal} />
-                  ) : (
-                    "Contact Supplier"
-                  )}
-                </span>
+            {/* Totals Summary */}
+            <div className='flex flex-col md:flex-row justify-between items-start md:items-center mt-6 pt-4 border-t gap-4'>
+              <div className='text-sm text-gray-700 w-full md:w-auto'>
+                <div className='grid grid-cols-2 gap-y-1 gap-x-6'>
+                  <span className='font-medium'>Subtotal:</span>
+                  <span>
+                    <Currency amount={subtotal} />
+                  </span>
+
+                  <span className='font-medium'>Shipping:</span>
+                  <span>
+                    <Currency amount={shipping} />
+                  </span>
+
+                  <span className='font-medium'>VAT (15%):</span>
+                  <span>
+                    <Currency amount={vat} />
+                  </span>
+
+                  <span className='font-semibold text-lg'>Total:</span>
+                  <span className='font-semibold text-lg text-[#2c6449]'>
+                    <Currency amount={total} />
+                  </span>
+                </div>
               </div>
 
-              {/* CTA Buttons */}
-              <div className='mt-4 flex flex-col gap-2'>
-                {showCouponInput && (
-                  <div className='flex gap-2'>
-                    <Input
-                      type='text'
-                      placeholder='Enter Coupon Code'
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value)}
-                    />
-                    <Button onClick={handleApplyCoupon}>Apply</Button>
-                  </div>
-                )}
-
-                <Button
-                  variant='link'
-                  className='text-xs text-[#2c6449] px-0'
-                  onClick={() => setShowCouponInput((prev) => !prev)}
-                >
-                  {showCouponInput ? "Hide Coupon" : "Add Coupon"}
+              <div className='flex flex-col md:flex-row gap-2 w-full md:w-auto'>
+                <Button className='bg-[#2c6449] text-white hover:bg-[#1b4533] w-full md:w-auto'>
+                  Proceed to Checkout
                 </Button>
 
-                <div className='flex flex-col md:flex-row gap-2 mt-2'>
-                  <Button
-                    disabled={isCheckoutDisabled}
-                    className='bg-[#2c6449] text-white'
-                    onClick={() =>
-                      router.push(`/checkout?supplierId=${supplierId}`)
-                    }
-                  >
-                    Checkout
-                  </Button>
-
-                  <Button
-                    variant='destructive'
-                    onClick={() => handleContactSupplier(supplierId, items)}
-                  >
-                    Contact Supplier
-                  </Button>
-
-                  <Button
-                    variant='secondary'
-                    onClick={() => handleReviewOrder(supplierId)}
-                  >
-                    Review Order
-                  </Button>
-                </div>
+                <Button
+                  variant='outline'
+                  className='text-[#2c6449] border-[#2c6449] w-full md:w-auto'
+                  onClick={() => handleNegotiate(supplierId, items)}
+                >
+                  Contact Supplier to Negotiate
+                </Button>
               </div>
             </div>
           </div>
         );
       })}
-
-      <ReviewOrderModal
-        isOpen={isReviewModalOpen}
-        onClose={() => setIsReviewModalOpen(false)}
-        supplierId={selectedSupplierId}
-      />
-
-      <ToastContainer
-        position='top-right'
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme='light'
-      />
     </div>
   );
-}
+};
+
+export default CartPage;

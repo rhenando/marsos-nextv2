@@ -14,8 +14,16 @@ import {
   arrayUnion,
 } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
-import { Select, SelectItem } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
 
 const UserMessages = () => {
@@ -170,24 +178,6 @@ const UserMessages = () => {
     }
   };
 
-  const getBadge = (type) => {
-    const base =
-      "inline-flex items-center text-xs font-medium px-2 py-1 rounded-full";
-
-    const map = {
-      "RFQ Inquiry": "bg-yellow-100 text-yellow-800",
-      "Product Inquiry": "bg-blue-100 text-blue-800",
-      "Cart Inquiry": "bg-purple-100 text-purple-800",
-      "Order Inquiry": "bg-green-100 text-green-800",
-    };
-
-    return (
-      <span className={`${base} ${map[type] || "bg-gray-200 text-gray-700"}`}>
-        {type}
-      </span>
-    );
-  };
-
   const filteredChats = chats.filter((chat) => {
     const matchesName = chat.name
       .toLowerCase()
@@ -197,90 +187,111 @@ const UserMessages = () => {
     return matchesName && matchesType;
   });
 
+  const badgeColorMap = {
+    "RFQ Inquiry": "yellow",
+    "Product Inquiry": "blue",
+    "Cart Inquiry": "purple",
+    "Order Inquiry": "green",
+  };
+
   if (loading || !userRole) {
     return (
-      <p className='text-center mt-6 text-sm text-gray-600'>
+      <p className='text-center mt-6 text-sm text-muted-foreground'>
         Loading messages...
       </p>
     );
   }
 
   return (
-    <div className='max-w-6xl mx-auto p-4'>
-      <h2 className='text-xl font-semibold mb-4'>Your Messages</h2>
+    <div className='max-w-6xl mx-auto p-6'>
+      <h2 className='text-2xl font-semibold mb-6'>Messages</h2>
 
       {/* Filters */}
-      <div className='flex flex-wrap gap-4 items-center mb-6'>
+      <div className='flex flex-wrap items-center gap-4 mb-6'>
         <Input
-          type='text'
           placeholder='Search by name...'
-          className='w-60'
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          className='w-60'
         />
+
         <Select value={selectedType} onValueChange={setSelectedType}>
-          <SelectItem value='All'>All Types</SelectItem>
-          <SelectItem value='RFQ Inquiry'>RFQ Inquiry</SelectItem>
-          <SelectItem value='Product Inquiry'>Product Inquiry</SelectItem>
-          <SelectItem value='Cart Inquiry'>Cart Inquiry</SelectItem>
-          <SelectItem value='Order Inquiry'>Order Inquiry</SelectItem>
+          <SelectTrigger className='w-48'>
+            <SelectValue placeholder='Select Type' />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value='All'>All Types</SelectItem>
+            {Object.keys(badgeColorMap).map((type) => (
+              <SelectItem key={type} value={type}>
+                {type}
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
       </div>
 
       {/* Table */}
-      {filteredChats.length === 0 ? (
-        <p className='text-gray-500 text-sm text-center'>No messages found.</p>
-      ) : (
-        <div className='overflow-x-auto border rounded'>
-          <table className='min-w-full text-sm'>
-            <thead className='bg-[#2c6449] text-white text-left'>
-              <tr>
-                <th className='px-4 py-2'>
-                  {userRole === "supplier" ? "Buyer" : "Supplier"}
-                </th>
-                <th className='px-4 py-2'>Concern Type</th>
-                <th className='px-4 py-2'>Last Updated</th>
-                <th className='px-4 py-2'>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredChats.map((chat) => (
-                <tr
-                  key={chat.id}
-                  className={chat.unread ? "bg-yellow-50" : "bg-white"}
-                >
-                  <td className='px-4 py-2'>{chat.name}</td>
-                  <td className='px-4 py-2'>{getBadge(chat.concernType)}</td>
-                  <td className='px-4 py-2 whitespace-nowrap'>
-                    {chat.lastUpdated.toLocaleString()}
-                  </td>
-                  <td className='px-4 py-2 flex gap-2'>
-                    <Link
-                      href={chat.chatPath}
-                      target='_blank'
-                      className='text-white bg-[#2c6449] px-3 py-1 rounded text-xs hover:bg-[#24523b]'
+      <ScrollArea className='rounded border'>
+        <table className='min-w-full text-sm'>
+          <thead className='bg-[#2c6449] text-white'>
+            <tr>
+              <th className='px-4 py-2 text-left'>
+                {userRole === "supplier" ? "Buyer" : "Supplier"}
+              </th>
+              <th className='px-4 py-2 text-left'>Concern Type</th>
+              <th className='px-4 py-2 text-left'>Last Updated</th>
+              <th className='px-4 py-2 text-left'>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredChats.map((chat) => (
+              <tr
+                key={chat.id}
+                className={chat.unread ? "bg-yellow-50" : "bg-white"}
+              >
+                <td className='px-4 py-2'>{chat.name}</td>
+                <td className='px-4 py-2'>
+                  <Badge
+                    variant='outline'
+                    className={`text-${badgeColorMap[chat.concernType]}-800`}
+                  >
+                    {chat.concernType}
+                  </Badge>
+                </td>
+                <td className='px-4 py-2'>
+                  {chat.lastUpdated.toLocaleString()}
+                </td>
+                <td className='px-4 py-2 flex gap-2'>
+                  <Link
+                    href={chat.chatPath}
+                    target='_blank'
+                    className='bg-[#2c6449] hover:bg-[#24523b] text-white text-xs px-3 py-2 rounded'
+                  >
+                    Open
+                  </Link>
+                  {chat.unread && (
+                    <Button
+                      size='sm'
+                      variant='outline'
+                      className='text-xs border-yellow-400 text-yellow-800 hover:bg-yellow-100'
+                      onClick={() =>
+                        handleMarkAsRead(chat.id, chat.collectionName)
+                      }
                     >
-                      Open
-                    </Link>
+                      Mark as Read
+                    </Button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </ScrollArea>
 
-                    {chat.unread && (
-                      <Button
-                        size='sm'
-                        variant='outline'
-                        className='text-xs border-yellow-400 text-yellow-800 hover:bg-yellow-100'
-                        onClick={() =>
-                          handleMarkAsRead(chat.id, chat.collectionName)
-                        }
-                      >
-                        Mark as Read
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {filteredChats.length === 0 && (
+        <p className='text-muted-foreground mt-4 text-sm text-center'>
+          No messages found.
+        </p>
       )}
     </div>
   );
