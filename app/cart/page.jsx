@@ -5,38 +5,63 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import Currency from "@/components/global/CurrencySymbol";
 import { db } from "@/firebase/config";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, onSnapshot, collection } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useCartNegotiation } from "@/hooks/useCartNegotiation";
 
 const CartPage = () => {
-  const { cartItems, removeCartItem, cartItemCount } = useCart();
+  const { removeCartItem, cartItemCount } = useCart(); // removeCartItem must be updated in context
   const [groupedItems, setGroupedItems] = useState({});
   const { currentUser } = useAuth();
   const router = useRouter();
+  const { startNegotiation } = useCartNegotiation();
 
   useEffect(() => {
-    const grouped = cartItems.reduce((acc, item) => {
-      const key = item.supplierId || "unknown";
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(item);
-      return acc;
-    }, {});
-    setGroupedItems(grouped);
-  }, [cartItems]);
+    if (!currentUser) return;
+
+    const q = collection(db, "carts", currentUser.uid, "items");
+    const unsub = onSnapshot(q, (snap) => {
+      const items = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const grouped = items.reduce((acc, item) => {
+        const key = item.supplierId || "unknown";
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(item);
+        return acc;
+      }, {});
+      setGroupedItems(grouped);
+    });
+
+    return () => unsub();
+  }, [currentUser]);
+
+  const handleQuantityChange = async (itemId, value) => {
+    if (value <= 0) {
+      toast.error("Quantity must be at least 1");
+      return;
+    }
+
+    const itemRef = doc(db, "carts", currentUser.uid, "items", itemId);
+    const updatedItemSnap = await setDoc(
+      itemRef,
+      {
+        quantity: parseFloat(value),
+        subtotal: parseFloat(value), // The exact price will be overwritten below
+      },
+      { merge: true }
+    );
+  };
 
   const handleNegotiate = async (supplierId, items) => {
     if (!currentUser) return toast.error("Please login to negotiate.");
-
     const chatId = `cart_${currentUser.uid}_${supplierId}`;
     const chatRef = doc(db, "cartChats", chatId);
 
     try {
-      const existingChat = await getDoc(chatRef);
-
-      if (!existingChat.exists()) {
-        await setDoc(chatRef, {
+      await setDoc(
+        chatRef,
+        {
           buyerId: currentUser.uid,
           supplierId,
           createdAt: new Date(),
@@ -51,8 +76,9 @@ const CartPage = () => {
             originalPrice: item.price,
             originalSubtotal: item.subtotal,
           })),
-        });
-      }
+        },
+        { merge: true }
+      );
 
       router.push(`/chat/cart/${chatId}`);
     } catch (err) {
@@ -67,12 +93,21 @@ const CartPage = () => {
         <h2 className='text-xl font-semibold text-gray-600'>
           Your cart is empty 🛒
         </h2>
+        <p className='mt-2 text-gray-500'>
+          Explore our products and add some items!
+        </p>
+        <Button
+          className='mt-4 bg-[#2c6449] text-white'
+          onClick={() => router.push("/products")}
+        >
+          Browse Products
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className='max-w-6xl mx-auto px-4 py-10'>
+    <div id='cart-page' className='max-w-6xl mx-auto px-4 py-10'>
       <h1 className='text-2xl font-bold mb-6 text-[#2c6449]'>Your Cart</h1>
 
       {Object.entries(groupedItems).map(([supplierId, items]) => {
@@ -112,18 +147,27 @@ const CartPage = () => {
                     <h3 className='font-semibold text-gray-800'>
                       {item.productName}
                     </h3>
-                    <p className='text-sm text-gray-600'>
-                      Qty: {item.quantity} × <Currency amount={item.price} />
-                    </p>
+                    <div className='flex gap-2 items-center text-sm text-gray-600'>
+                      <label>Qty:</label>
+                      <input
+                        type='number'
+                        min={1}
+                        value={item.quantity}
+                        onChange={(e) =>
+                          handleQuantityChange(
+                            item.id,
+                            parseInt(e.target.value)
+                          )
+                        }
+                        className='border px-2 py-1 rounded w-18'
+                      />
+                      <span>×</span>
+                      <Currency amount={item.price} />
+                    </div>
                     <p className='text-sm text-gray-500'>
-                      Size: {item.size || "—"} | Color: {item.color || "—"} |{" "}
+                      Size: {item.size || "—"} | Color: {item.color || "—"} |
                       Location: {item.deliveryLocation}
                     </p>
-                    {item.negotiated && (
-                      <p className='text-xs text-green-600 mt-1'>
-                        Negotiated Price ✅
-                      </p>
-                    )}
                     <p className='text-sm font-medium text-[#2c6449] mt-1'>
                       Subtotal: <Currency amount={item.subtotal} />
                     </p>
@@ -138,7 +182,6 @@ const CartPage = () => {
               ))}
             </div>
 
-            {/* Totals Summary */}
             <div className='flex flex-col md:flex-row justify-between items-start md:items-center mt-6 pt-4 border-t gap-4'>
               <div className='text-sm text-gray-700 w-full md:w-auto'>
                 <div className='grid grid-cols-2 gap-y-1 gap-x-6'>
@@ -146,17 +189,14 @@ const CartPage = () => {
                   <span>
                     <Currency amount={subtotal} />
                   </span>
-
                   <span className='font-medium'>Shipping:</span>
                   <span>
                     <Currency amount={shipping} />
                   </span>
-
                   <span className='font-medium'>VAT (15%):</span>
                   <span>
                     <Currency amount={vat} />
                   </span>
-
                   <span className='font-semibold text-lg'>Total:</span>
                   <span className='font-semibold text-lg text-[#2c6449]'>
                     <Currency amount={total} />
@@ -165,10 +205,9 @@ const CartPage = () => {
               </div>
 
               <div className='flex flex-col md:flex-row gap-2 w-full md:w-auto'>
-                <Button className='bg-[#2c6449] text-white hover:bg-[#1b4533] w-full md:w-auto'>
+                <Button className='bg-[#2c6449] text-white w-full md:w-auto'>
                   Proceed to Checkout
                 </Button>
-
                 <Button
                   variant='outline'
                   className='text-[#2c6449] border-[#2c6449] w-full md:w-auto'

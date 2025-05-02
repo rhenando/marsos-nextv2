@@ -3,7 +3,7 @@ import {
   query,
   where,
   onSnapshot,
-  addDoc,
+  setDoc,
   deleteDoc,
   doc,
   updateDoc,
@@ -25,10 +25,7 @@ export const CartProvider = ({ children }) => {
   useEffect(() => {
     if (authLoading || !currentUser) return;
 
-    const q = query(
-      collection(db, "carts"),
-      where("buyerId", "==", currentUser.uid)
-    );
+    const q = collection(db, "carts", currentUser.uid, "items");
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const items = snapshot.docs.map((doc) => ({
@@ -46,8 +43,7 @@ export const CartProvider = ({ children }) => {
     if (!currentUser) return;
 
     const q = query(
-      collection(db, "carts"),
-      where("buyerId", "==", currentUser.uid),
+      collection(db, "carts", currentUser.uid, "items"),
       where("productId", "==", item.productId),
       where("size", "==", item.size || ""),
       where("color", "==", item.color || ""),
@@ -60,13 +56,17 @@ export const CartProvider = ({ children }) => {
       const existingData = existingDoc.data();
       const updatedQty = existingData.quantity + item.quantity;
 
-      await updateDoc(doc(db, "carts", existingDoc.id), {
-        quantity: updatedQty,
-        subtotal: updatedQty * item.price,
-        shippingCost: item.shippingCost || 0,
-      });
+      await updateDoc(
+        doc(db, "carts", currentUser.uid, "items", existingDoc.id),
+        {
+          quantity: updatedQty,
+          subtotal: updatedQty * item.price,
+          shippingCost: item.shippingCost || 0,
+        }
+      );
     } else {
-      await addDoc(collection(db, "carts"), {
+      const itemId = item.productId + "-" + Date.now(); // Ensure unique key
+      await setDoc(doc(db, "carts", currentUser.uid, "items", itemId), {
         ...item,
         buyerId: currentUser.uid,
         createdAt: new Date(),
@@ -75,17 +75,14 @@ export const CartProvider = ({ children }) => {
   };
 
   const removeCartItem = async (itemId) => {
-    await deleteDoc(doc(db, "carts", itemId));
+    await deleteDoc(doc(db, "carts", currentUser.uid, "items", itemId));
   };
 
   const clearCart = async () => {
-    const q = query(
-      collection(db, "carts"),
-      where("buyerId", "==", currentUser.uid)
-    );
+    const q = collection(db, "carts", currentUser.uid, "items");
     const snapshot = await getDocs(q);
     const promises = snapshot.docs.map((docSnap) =>
-      deleteDoc(doc(db, "carts", docSnap.id))
+      deleteDoc(doc(db, "carts", currentUser.uid, "items", docSnap.id))
     );
     await Promise.all(promises);
   };
