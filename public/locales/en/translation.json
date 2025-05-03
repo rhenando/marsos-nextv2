@@ -67,7 +67,7 @@
     "unnamed_product": "Unnamed Product",
     "login_first": "Please log in to contact the supplier.",
     "no_supplier": "Supplier ID is missing.",
-    "supplier": "Supplier:",
+    "supplier": "Supplier",
     "unknown": "Unknown",
     "negotiable": "Pricing Negotiable - Contact Supplier",
     "min_order": "Min. Order: {{minOrder}} pcs",
