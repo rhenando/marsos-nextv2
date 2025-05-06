@@ -14,7 +14,7 @@ import { db } from "@/firebase/config";
 import { useAuth } from "@/context/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Paperclip, SendHorizonal, SendHorizontal } from "lucide-react";
+import { Paperclip, SendHorizontal } from "lucide-react";
 
 const ChatMessages = ({ chatId, chatMeta }) => {
   const { currentUser } = useAuth();

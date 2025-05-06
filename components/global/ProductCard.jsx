@@ -1,3 +1,4 @@
+// components/global/ProductCard.jsx
 "use client";
 
 import { memo, useEffect, useTransition } from "react";
@@ -5,8 +6,10 @@ import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { Eye, Mail, Heart } from "react-feather";
 import { getAuth } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import Currency from "@/components/global/CurrencySymbol";
-import { toast } from "sonner"; // or "react-hot-toast" if you're using that package
+import { toast } from "sonner";
+import { db } from "@/firebase/config";
 
 const ProductCard = ({ product, locale, currencySymbol, formatNumber }) => {
   const router = useRouter();
@@ -14,7 +17,7 @@ const ProductCard = ({ product, locale, currencySymbol, formatNumber }) => {
   const [isPending, startTransition] = useTransition();
 
   const priceRanges = product.priceRanges || [];
-  const prices = priceRanges.map((range) => parseFloat(range.price));
+  const prices = priceRanges.map((r) => parseFloat(r.price));
   const lowestPrice = prices.length ? Math.min(...prices) : "N/A";
   const highestPrice = prices.length ? Math.max(...prices) : "N/A";
   const minOrder = priceRanges[0]?.minQty || "N/A";
@@ -24,9 +27,9 @@ const ProductCard = ({ product, locale, currencySymbol, formatNumber }) => {
   const getLocalizedProductName = () => {
     const name = product.productName;
     if (typeof name === "string") return name;
-    if (typeof name === "object" && name !== null) {
+    if (name && typeof name === "object") {
       return (
-        name[i18n.language] || name["en"] || t("product_card.unnamed_product")
+        name[i18n.language] || name.en || t("product_card.unnamed_product")
       );
     }
     return t("product_card.unnamed_product");
@@ -38,7 +41,7 @@ const ProductCard = ({ product, locale, currencySymbol, formatNumber }) => {
     });
   };
 
-  const handleContactSupplier = () => {
+  const handleContactSupplier = async () => {
     const auth = getAuth();
     const currentUser = auth.currentUser;
 
@@ -46,26 +49,60 @@ const ProductCard = ({ product, locale, currencySymbol, formatNumber }) => {
       toast.error(t("product_card.login_first"));
       return;
     }
-
     if (!product?.supplierId) {
       toast.error(t("product_card.no_supplier"));
       return;
     }
 
     const chatId = `${currentUser.uid}_${product.supplierId}_${product.id}`;
-    router.push(
-      `/product-chat/${chatId}?productId=${product.id}&supplierId=${product.supplierId}`
-    );
+    const chatRef = doc(db, "productChats", chatId);
+    const miniRef = doc(db, "miniProductsData", chatId);
+
+    try {
+      // 1️⃣ Upsert the chat thread
+      await setDoc(
+        chatRef,
+        {
+          buyerId: currentUser.uid,
+          supplierId: product.supplierId,
+          productId: product.id,
+          participants: [currentUser.uid, product.supplierId],
+          createdAt: serverTimestamp(),
+          // leave messages field to be added by your chat UI
+        },
+        { merge: true }
+      );
+
+      // 2️⃣ Create a snapshot of the product
+      await setDoc(
+        miniRef,
+        {
+          originalProductId: product.id,
+          productName: product.productName,
+          mainImageUrl: product.mainImageUrl,
+          priceRanges: product.priceRanges,
+          supplierName: product.supplierName,
+          category: product.category,
+          snapshotAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } catch (err) {
+      console.error("Error initializing chat or snapshot:", err);
+      toast.error(t("product_card.chat_create_failed"));
+      return;
+    }
+
+    // 3️⃣ Navigate into the chat page
+    router.push(`/chat/product/${chatId}`);
   };
 
   useEffect(() => {
-    // Prefetch the product detail route for snappier navigation
     router.prefetch(`/product/${product.id}`);
   }, [product.id, router]);
 
   return (
     <div className='p-2 relative'>
-      {/* Loading Overlay */}
       {isPending && (
         <div className='absolute inset-0 bg-white/70 flex items-center justify-center z-50'>
           <span className='text-[#2c6449] text-sm font-medium'>
@@ -75,17 +112,12 @@ const ProductCard = ({ product, locale, currencySymbol, formatNumber }) => {
       )}
 
       <div className='relative group bg-white border rounded-xl shadow hover:shadow-md transition-all flex flex-col overflow-hidden'>
-        {/* Wishlist Icon */}
         <div className='absolute top-2 right-2 z-10'>
           <Heart size={16} className='text-red-500' />
         </div>
-
-        {/* HOT Badge */}
         <div className='absolute top-2 left-2 bg-red-600 text-white text-xs font-semibold px-2 py-0.5 rounded shadow z-10'>
           {t("product_card.hot")}
         </div>
-
-        {/* Image */}
         <div
           className='relative aspect-[4/3] bg-white overflow-hidden border-b border-gray-200 cursor-pointer'
           onClick={handleViewProduct}
@@ -97,8 +129,6 @@ const ProductCard = ({ product, locale, currencySymbol, formatNumber }) => {
             loading='lazy'
           />
         </div>
-
-        {/* Content */}
         <div className='flex flex-col p-4 flex-1 bg-white'>
           <div className='flex-1'>
             <p className='text-xs text-gray-400 mb-1 capitalize'>{category}</p>
@@ -115,10 +145,9 @@ const ProductCard = ({ product, locale, currencySymbol, formatNumber }) => {
               </span>
             </p>
 
-            {/* Price Range */}
             {!isNaN(lowestPrice) && !isNaN(highestPrice) && lowestPrice > 0 ? (
               <p className='text-lg font-bold mb-1 capitalize'>
-                <Currency amount={lowestPrice} /> -{" "}
+                <Currency amount={lowestPrice} /> –{" "}
                 <Currency amount={highestPrice} />
               </p>
             ) : (
@@ -131,8 +160,6 @@ const ProductCard = ({ product, locale, currencySymbol, formatNumber }) => {
               {t("product_card.min_order", { minOrder })}
             </p>
           </div>
-
-          {/* CTA Buttons */}
           <div className='flex gap-2 mt-4'>
             <button
               onClick={handleViewProduct}
@@ -141,7 +168,6 @@ const ProductCard = ({ product, locale, currencySymbol, formatNumber }) => {
               <Eye size={14} />
               {t("product_card.view_details")}
             </button>
-
             <button
               onClick={handleContactSupplier}
               className='w-1/2 text-xs py-1.5 px-2 border border-blue-600 text-blue-600 font-medium rounded-full hover:bg-blue-50 transition capitalize flex items-center justify-center gap-1 whitespace-nowrap'

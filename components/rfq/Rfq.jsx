@@ -1,10 +1,11 @@
+// components/RfqModal.jsx
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
 import CreatableSelect from "react-select/creatable";
 import Select from "react-select";
-import { db, storage } from "../../firebase/config";
-import { useAuth } from "../../context/AuthContext";
+import { db, storage } from "@/firebase/config";
+import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "react-i18next";
 import {
   collection,
@@ -17,7 +18,7 @@ import {
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { useRouter } from "next/navigation";
 import countryList from "react-select-country-list";
-import { showSuccess, showError, showWarning } from "../../utils/toastUtils";
+import { toast } from "sonner";
 
 const RfqModal = ({ show, onClose }) => {
   const { currentUser } = useAuth();
@@ -70,22 +71,20 @@ const RfqModal = ({ show, onClose }) => {
           }
         });
 
-        const cleanedCategorySuppliers = {};
-        Object.keys(categoryMap).forEach((category) => {
-          cleanedCategorySuppliers[category] = Array.from(
-            categoryMap[category].values()
-          );
+        const cleaned = {};
+        Object.keys(categoryMap).forEach((cat) => {
+          cleaned[cat] = Array.from(categoryMap[cat].values());
         });
 
         setCategories(categoryList);
-        setCategorySuppliers(cleanedCategorySuppliers);
+        setCategorySuppliers(cleaned);
       } catch (error) {
-        showError("Failed to fetch categories.");
+        toast.error(t("rfq.fetch_categories_error"));
       }
     };
 
     fetchCategories();
-  }, []);
+  }, [t]);
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -107,14 +106,14 @@ const RfqModal = ({ show, onClose }) => {
           (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
         setUploadProgress(progress);
       },
-      (error) => {
-        showError("File upload failed.");
+      () => {
+        toast.error(t("rfq.upload_failed"));
         setUploading(false);
       },
       async () => {
         const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
         setFileURL(downloadURL);
-        showSuccess("File uploaded successfully.");
+        toast.success(t("rfq.upload_success"));
         setUploading(false);
       }
     );
@@ -122,37 +121,34 @@ const RfqModal = ({ show, onClose }) => {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!selectedCategory) newErrors.selectedCategory = "Category is required.";
+    if (!selectedCategory) newErrors.selectedCategory = t("rfq.error_category");
     if (!selectedSubcategory)
-      newErrors.selectedSubcategory = "Subcategory is required.";
+      newErrors.selectedSubcategory = t("rfq.error_subcategory");
     if (!productDetails.trim())
-      newErrors.productDetails = "Product details are required.";
-    if (!file) newErrors.file = "Please select a file.";
+      newErrors.productDetails = t("rfq.error_details");
+    if (!file) newErrors.file = t("rfq.error_file");
     if (file && !fileURL && !uploading)
-      newErrors.file = "File not uploaded. Please wait or reselect.";
+      newErrors.file = t("rfq.error_file_upload");
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!currentUser) return showWarning("You must be logged in.");
+    if (!currentUser) return toast.warning(t("rfq.must_login"));
 
-    const isValid = validateForm();
-    if (!isValid || uploading) return;
+    if (!validateForm() || uploading) return;
 
     try {
       const userSnap = await getDoc(doc(db, "users", currentUser.uid));
-      if (!userSnap.exists()) return showError("User not found.");
-
-      const userData = userSnap.data();
-      const userRole = userData.role || "buyer";
+      if (!userSnap.exists()) return toast.error(t("rfq.user_not_found"));
+      const userRole = userSnap.data().role || "buyer";
 
       const suppliers = categorySuppliers[selectedCategory.value] || [];
-      if (suppliers.length === 0) return showError("No suppliers found.");
+      if (suppliers.length === 0) return toast.error(t("rfq.no_suppliers"));
 
-      const rfqPromises = suppliers.map(async (supplier) => {
-        const docRef = await addDoc(collection(db, "rfqs"), {
+      const promises = suppliers.map(async (supplier) => {
+        const rfqRef = await addDoc(collection(db, "rfqs"), {
           buyerId: currentUser.uid,
           category: selectedCategory.value,
           subcategory: selectedSubcategory.value,
@@ -170,7 +166,6 @@ const RfqModal = ({ show, onClose }) => {
         const chatId = `chat_${currentUser.uid}_${supplier.supplierId}`;
         const chatRef = doc(db, "rfqChats", chatId);
         const chatSnap = await getDoc(chatRef);
-
         if (!chatSnap.exists()) {
           await setDoc(chatRef, {
             chatId,
@@ -179,24 +174,26 @@ const RfqModal = ({ show, onClose }) => {
             supplierName: supplier.supplierName,
             messages: [],
             createdAt: new Date(),
-            rfqId: docRef.id,
+            rfqId: rfqRef.id,
           });
         }
       });
 
-      await Promise.all(rfqPromises);
-      showSuccess("RFQs sent successfully!");
+      await Promise.all(promises);
+      toast.success(t("rfq.sent_success"));
       setShowSuccessScreen(true);
 
       setTimeout(() => {
         onClose();
-        router.push(
-          userRole === "buyer" ? "/buyer-dashboard" : "/supplier-dashboard"
-        );
+        if (userSnap.data().role === "buyer") {
+          router.push("/buyer-dashboard/messages");
+        } else {
+          router.push("/supplier-dashboard/messages");
+        }
       }, 1500);
     } catch (error) {
       console.error(error);
-      showError("Submission failed. Try again.");
+      toast.error(t("rfq.submit_failed"));
     }
   };
 
@@ -232,13 +229,13 @@ const RfqModal = ({ show, onClose }) => {
     <div className='fixed inset-0 bg-[#2c6449]/30 z-[9999] flex justify-center overflow-y-auto pt-[90px] px-4 pb-10'>
       <div className='bg-white w-full max-w-4xl rounded-lg shadow-lg'>
         <div className='flex justify-between items-center p-4 border-b'>
-          <h2 className='text-lg font-semibold'> {t("rfq.title")} </h2>
+          <h2 className='text-lg font-semibold'>{t("rfq.title")}</h2>
           <button onClick={onClose} className='text-gray-600 hover:text-black'>
             ✕
           </button>
         </div>
-
         <form onSubmit={handleSubmit} className='p-4 space-y-4 text-sm'>
+          {/* Category and Subcategory */}
           <div className='grid md:grid-cols-2 gap-4'>
             <div>
               <label className='font-medium'>{t("rfq.category")}</label>
@@ -261,9 +258,9 @@ const RfqModal = ({ show, onClose }) => {
                 value={selectedSubcategory}
                 onChange={setSelectedSubcategory}
                 onCreateOption={(val) => {
-                  const newOption = { value: val, label: val };
-                  setSubcategoryOptions((prev) => [...prev, newOption]);
-                  setSelectedSubcategory(newOption);
+                  const newOpt = { value: val, label: val };
+                  setSubcategoryOptions((p) => [...p, newOpt]);
+                  setSelectedSubcategory(newOpt);
                 }}
                 isClearable
               />
@@ -275,6 +272,7 @@ const RfqModal = ({ show, onClose }) => {
             </div>
           </div>
 
+          {/* Size, Color, Shipping */}
           <div className='grid md:grid-cols-3 gap-4'>
             <div>
               <label className='font-medium'>{t("rfq.size")}</label>
@@ -304,11 +302,12 @@ const RfqModal = ({ show, onClose }) => {
             </div>
           </div>
 
+          {/* Details */}
           <div>
             <label className='font-medium'>{t("rfq.details")}</label>
             <textarea
               className='w-full border rounded p-2'
-              rows='3'
+              rows={3}
               value={productDetails}
               onChange={(e) => setProductDetails(e.target.value)}
             />
@@ -317,6 +316,7 @@ const RfqModal = ({ show, onClose }) => {
             )}
           </div>
 
+          {/* File Upload */}
           <div>
             <label className='font-medium'>{t("rfq.upload_file")}</label>
             <input
@@ -327,23 +327,24 @@ const RfqModal = ({ show, onClose }) => {
             />
             {uploading && (
               <p className='text-blue-500 text-xs'>
-                Uploading... {Math.round(uploadProgress)}%
+                {t("rfq.uploading")} {Math.round(uploadProgress)}%
               </p>
             )}
             {fileURL && !uploading && (
-              <p className='text-green-500 text-xs'>File uploaded ✔</p>
+              <p className='text-green-500 text-xs'>{t("rfq.file_uploaded")}</p>
             )}
             {errors.file && (
               <p className='text-red-500 text-xs'>{errors.file}</p>
             )}
           </div>
 
+          {/* Share business card */}
           <div className='flex items-center space-x-2'>
             <input
               id='shareBusinessCard'
               type='checkbox'
               checked={shareBusinessCard}
-              onChange={() => setShareBusinessCard(!shareBusinessCard)}
+              onChange={() => setShareBusinessCard((p) => !p)}
               className='w-4 h-4'
             />
             <label htmlFor='shareBusinessCard' className='text-sm'>
@@ -351,12 +352,13 @@ const RfqModal = ({ show, onClose }) => {
             </label>
           </div>
 
+          {/* Submit */}
           <button
             type='submit'
             disabled={uploading}
             className='bg-[#2c6449] text-white px-4 py-2 rounded hover:bg-opacity-90'
           >
-            {uploading ? "Uploading..." : t("rfq.submit")}
+            {uploading ? t("rfq.uploading") : t("rfq.submit")}
           </button>
         </form>
       </div>
