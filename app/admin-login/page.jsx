@@ -34,7 +34,7 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className='grid min-h-screen grid-cols-1 lg:grid-cols-2 bg-white'>
+    <div className='grid min-h-4/5 grid-cols-1 lg:grid-cols-2 bg-white'>
       {/* Left: Login Form */}
       <div className='flex flex-col justify-center px-6 py-12 lg:px-24'>
         {/* Logo */}
@@ -103,47 +103,18 @@ export default function AdminLoginPage() {
           >
             Login
           </Button>
-
-          {/* OR separator */}
-          <div className='flex items-center gap-4'>
-            <Separator className='flex-1' />
-            <span className='text-xs text-muted-foreground'>
-              Or continue with
-            </span>
-            <Separator className='flex-1' />
-          </div>
-
-          {/* GitHub Button (placeholder only) */}
-          <Button variant='outline' className='w-full flex gap-2 items-center'>
-            <GithubIcon className='w-4 h-4' />
-            Login with GitHub
-          </Button>
-
-          <p className='text-sm text-center text-muted-foreground'>
-            Don’t have access?{" "}
-            <span className='underline text-primary'>Contact admin</span>
-          </p>
         </div>
       </div>
 
       {/* Right Panel: Placeholder */}
-      <div className='hidden lg:block bg-gray-100'>
-        <div className='flex h-full items-center justify-center'>
-          <div className='border border-gray-300 rounded-full p-6 opacity-20'>
-            <svg
-              xmlns='http://www.w3.org/2000/svg'
-              className='w-16 h-16 text-gray-400'
-              fill='none'
-              viewBox='0 0 24 24'
-              stroke='currentColor'
-              strokeWidth={1.5}
-            >
-              <path
-                strokeLinecap='round'
-                strokeLinejoin='round'
-                d='M12 4.5v15m7.5-7.5h-15'
-              />
-            </svg>
+      <div className='hidden lg:flex bg-gray-100'>
+        <div className='flex w-full h-full items-center justify-center'>
+          <div className='border border-gray-300 rounded-full p-6'>
+            <img
+              src='/logo.svg'
+              alt='Logo'
+              className='w-40 h-40 object-contain'
+            />
           </div>
         </div>
       </div>

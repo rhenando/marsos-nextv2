@@ -616,5 +616,91 @@
   "category": {
     "category": "Category",
     "noProductsFound": "No products found."
-  }
+  },
+
+  "employees": {
+    "manage": "Manage Employees",
+    "description": "Add, edit, or remove your team members here.",
+    "add": "Add Employee",
+    "edit": "Edit Employee",
+    "update": "Update Employee",
+    "current": "Current Employees",
+
+    "name": "Full Name",
+    "enter_name": "Enter full name",
+    "role": "Role",
+    "select_or_create_role": "Select or create a role",
+    "email": "Email",
+    "enter_email": "Enter email address",
+    "username": "Username",
+    "enter_username": "Enter username",
+    "password": "Password",
+    "enter_password": "Enter password",
+
+    "added": "Employee added successfully.",
+    "updated": "Employee updated successfully.",
+    "deleted": "Employee deleted successfully.",
+
+    "missing_supplier_id": "Supplier ID is missing.",
+    "user_not_authenticated": "User is not authenticated.",
+    "all_fields_required": "All fields are required.",
+    "add_employee_error": "Failed to add employee.",
+    "update_employee_error": "Failed to update employee.",
+    "delete_employee_error": "Failed to delete employee.",
+    "fetch_employees_error": "Failed to fetch employees."
+  },
+  "title": "Upload Product",
+  "uploading": "Uploading...",
+  "supplier_name": "Supplier Name",
+  "supplier_id": "Supplier ID",
+  "supplier_number": "Supplier Number",
+  "select_supplier": "Select a supplier",
+  "fetch_categories_error": "Failed to fetch categories.",
+  "fetch_suppliers_error": "Failed to fetch suppliers.",
+  "option_exists": "The option \"{{opt}}\" already exists.",
+  "option_added": "Added option \"{{opt}}\".",
+  "negative_not_allowed": "Negative numbers are not allowed.",
+  "qty_added": "Added quantity \"{{qty}}\".",
+  "qty_exists": "Quantity \"{{qty}}\" already exists.",
+  "numeric_only": "Only numeric values or 'Unlimited' allowed.",
+  "one_decimal": "Only one decimal point is allowed.",
+  "alpha_only": "Only alphabetic characters are allowed.",
+  "select_supplier_error": "Please select a supplier before submitting.",
+  "fill_all_error": "Please fill all required fields before submitting.",
+  "upload_success": "Product uploaded successfully.",
+  "upload_fail": "Failed to upload. Please try again later.",
+
+  "name_en": "Product Name (English)",
+  "name_ar": "اسم المنتج (Arabic)",
+  "desc_en": "Product Description (English)",
+  "desc_ar": "وصف المنتج (Arabic)",
+
+  "select_or_create_category": "Select or create category",
+  "sub_category": "Subcategory",
+  "select_or_create_subcategory": "Select or create subcategory",
+
+  "main_location": "Main Location",
+  "select_or_create_location": "Select or create location",
+
+  "sizes": "Sizes",
+  "select_or_create_size": "Select or create size",
+  "colors": "Colors",
+  "select_or_create_color": "Select or create color",
+
+  "main_image": "Main Image",
+  "additional_images": "Additional Images",
+  "remove": "Remove",
+  "add_another_image": "Add another image",
+
+  "tier": "Tier",
+  "remove_price_range": "Remove price range",
+  "min_qty": "Min Qty",
+  "min_qty_error": "Minimum order should be at least 1.",
+  "max_qty": "Max Qty",
+  "price": "Price",
+  "numeric_price_error": "Only numeric values are allowed for price.",
+
+  "delivery_locations": "Delivery Locations",
+  "add_price_range": "Add price range",
+  "add_location": "Add location"
 }

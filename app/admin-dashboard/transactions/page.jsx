@@ -8,7 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import sarSymbol from "@/public/sar_symbol.svg";
+import sarSymbol from "@/assets/sar_symbol.svg";
 
 const PAGE_SIZE = 10;
 
