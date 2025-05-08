@@ -1,79 +1,145 @@
-// app/orders/page.jsx
 "use client";
 
-import { useEffect, useState } from "react";
-import { db } from "@/firebase/config";
+import { useState } from "react";
+import Link from "next/link";
+
 import { useAuth } from "@/context/AuthContext";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import Currency from "@/components/global/CurrencySymbol";
+import BuyerProfile from "@/components/buyer/BuyerProfile";
+import Orders from "@/components/buyer/orders/Orders";
+import UserMessages from "@/components/supplier-buyer/UserMessages";
 
-const OrdersPage = () => {
-  const { currentUser } = useAuth();
-  const [orders, setOrders] = useState([]);
+import {
+  Home,
+  User,
+  ShoppingCart,
+  Heart,
+  ShoppingBag,
+  Mail,
+  HelpCircle,
+  Menu,
+} from "react-feather";
 
-  useEffect(() => {
-    if (!currentUser) return;
+const Dashboard = () => {
+  const { userData } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [selectedPage, setSelectedPage] = useState("home");
 
-    const fetchOrders = async () => {
-      const q = query(
-        collection(db, "orders"),
-        where("buyerId", "==", currentUser.uid)
-      );
-      const snapshot = await getDocs(q);
-      const results = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setOrders(results);
-    };
+  const menuItems = [
+    { key: "home", label: "Home", icon: <Home size={18} /> },
+    { key: "profile", label: "Profile", icon: <User size={18} /> },
+    { key: "orders", label: "Orders", icon: <ShoppingCart size={18} /> },
+    { key: "wishlist", label: "Wishlist", icon: <Heart size={18} /> },
+    { key: "cart", label: "Cart", icon: <ShoppingBag size={18} /> },
+    { key: "messages", label: "Messages", icon: <Mail size={18} /> },
+    { key: "support", label: "Support", icon: <HelpCircle size={18} /> },
+  ];
 
-    fetchOrders();
-  }, [currentUser]);
+  const renderContent = () => {
+    switch (selectedPage) {
+      case "home":
+        return (
+          <div>
+            <h2 className='text-2xl font-bold text-primary'>
+              Welcome, {userData?.name || "Buyer"}!
+            </h2>
+            <p className='text-gray-600 mt-2'>
+              Manage your orders, wishlist, and profile all in one place.
+            </p>
+          </div>
+        );
+      case "profile":
+        return <BuyerProfile />;
+      case "orders":
+        return <Orders />;
+      case "messages":
+        return <UserMessages />;
+      case "wishlist":
+        return (
+          <div>
+            <h2 className='text-xl font-semibold text-primary'>Wishlist</h2>
+            <p className='text-gray-600 mt-2'>Items you’ve saved for later.</p>
+          </div>
+        );
+      case "cart":
+        return (
+          <div>
+            <h2 className='text-xl font-semibold text-primary'>
+              Shopping Cart
+            </h2>
+            <p className='text-gray-600 mt-2'>
+              View and manage items in your cart.
+            </p>
+          </div>
+        );
+      case "support":
+        return (
+          <div>
+            <h2 className='text-xl font-semibold text-primary'>Support</h2>
+            <p className='text-gray-600 mt-2'>
+              Need help? Reach out to our support team.
+            </p>
+          </div>
+        );
+      default:
+        return (
+          <h2 className='text-xl font-semibold text-red-500'>Page Not Found</h2>
+        );
+    }
+  };
 
   return (
-    <div className='max-w-4xl mx-auto px-4 py-10'>
-      <h1 className='text-2xl font-bold text-[#2c6449] mb-6'>My Orders</h1>
+    <div className='min-h-screen flex flex-col lg:flex-row bg-gray-50'>
+      {/* Mobile Header */}
+      <div className='flex items-center justify-between p-4 bg-white shadow-md lg:hidden'>
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className='text-primary'
+        >
+          <Menu />
+        </button>
+        <h1 className='text-lg font-semibold text-primary'>Buyer Dashboard</h1>
+        <img
+          src={userData?.logoUrl || "https://via.placeholder.com/32"}
+          alt='User Avatar'
+          className='w-10 h-10 rounded-full object-cover'
+        />
+      </div>
 
-      {orders.length === 0 ? (
-        <p className='text-gray-600'>You haven't placed any orders yet.</p>
-      ) : (
-        orders.map((order) => (
-          <div
-            key={order.id}
-            className='border mb-6 p-4 rounded-lg bg-white shadow-sm'
-          >
-            <h2 className='text-lg font-semibold text-[#2c6449]'>
-              Supplier: {order.supplierId}
-            </h2>
-            <p className='text-sm text-gray-500 mb-2'>
-              Status: {order.orderStatus}
-            </p>
-            <ul className='text-sm text-gray-700 space-y-1 mb-2'>
-              {order.items.map((item, idx) => (
-                <li key={idx}>
-                  {item.productName} × {item.quantity}
-                </li>
-              ))}
-            </ul>
-            <div className='text-sm text-gray-800'>
-              <p>
-                Subtotal: <Currency amount={order.subtotal} />
-              </p>
-              <p>
-                Shipping: <Currency amount={order.shipping} />
-              </p>
-              <p>
-                VAT: <Currency amount={order.vat} />
-              </p>
-              <p className='font-bold text-[#2c6449]'>
-                Total: <Currency amount={order.total} />
-              </p>
-            </div>
-          </div>
-        ))
-      )}
+      {/* Sidebar */}
+      <aside
+        className={`${
+          sidebarOpen ? "block" : "hidden"
+        } lg:block w-full lg:w-64 bg-white border-r shadow-md`}
+      >
+        <nav className='flex flex-col py-6'>
+          {menuItems.map((item) => (
+            <button
+              key={item.key}
+              onClick={() => {
+                setSelectedPage(item.key);
+                setSidebarOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-6 py-3 text-sm transition-colors ${
+                selectedPage === item.key
+                  ? "text-primary font-bold"
+                  : "text-gray-700 hover:text-primary"
+              }`}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </nav>
+      </aside>
+
+      {/* Main Content */}
+      <main className='flex-1 p-4 md:p-8'>
+        <div className='bg-white rounded-lg shadow-md p-6'>
+          {renderContent()}
+        </div>
+      </main>
     </div>
   );
 };
 
-export default OrdersPage;
+export default Dashboard;

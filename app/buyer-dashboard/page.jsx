@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import { useAuth } from "@/context/AuthContext";
 import BuyerProfile from "@/components/buyer/BuyerProfile";
-import OrdersPage from "@/components/orders/Orders";
+import Orders from "@/components/buyer/orders/Orders";
 import UserMessages from "@/components/supplier-buyer/UserMessages";
 
 import {
@@ -50,7 +50,7 @@ const Dashboard = () => {
       case "profile":
         return <BuyerProfile />;
       case "orders":
-        return <OrdersPage />;
+        return <Orders />;
       case "messages":
         return <UserMessages />;
       case "wishlist":

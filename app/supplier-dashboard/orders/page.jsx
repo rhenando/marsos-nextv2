@@ -18,7 +18,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 
-const SupplierOrdersPage = () => {
+export default function SupplierOrdersPage() {
   const { currentUser } = useAuth();
   const router = useRouter();
 
@@ -27,8 +27,9 @@ const SupplierOrdersPage = () => {
   const [hoveredOrderId, setHoveredOrderId] = useState(null);
   const [notifiedBills, setNotifiedBills] = useState(new Set());
 
+  // 1) Fetch this supplier’s orders once on mount
   useEffect(() => {
-    const fetchSupplierOrders = async () => {
+    async function fetchSupplierOrders() {
       if (!currentUser?.uid) return;
 
       const snapshot = await getDocs(collection(db, "orders"));
@@ -36,63 +37,99 @@ const SupplierOrdersPage = () => {
 
       snapshot.forEach((docSnap) => {
         const data = docSnap.data();
-        const supplierInItems = data.items?.some(
-          (item) => item.supplierId === currentUser.uid
-        );
-        if (!supplierInItems) return;
 
-        const createdAt = data.createdAt?.seconds
-          ? new Date(data.createdAt.seconds * 1000).toLocaleString()
-          : "Unknown";
+        // only keep orders that include this supplier
+        if (!data.items?.some((i) => i.supplierId === currentUser.uid)) {
+          return;
+        }
+
+        // normalize createdAt
+        let createdAt = "Unknown";
+        if (data.createdAt?.seconds) {
+          createdAt = new Date(data.createdAt.seconds * 1000).toLocaleString();
+        } else if (typeof data.createdAt === "string") {
+          createdAt = new Date(data.createdAt).toLocaleString();
+        }
+
+        // bill + sadad
+        const billNumber = data.billNumber || data.orderId || "N/A";
+        const sadadNumber = data.sadadNumber || "N/A";
+
+        // coerce total -> Number
+        const rawTotal = data.total ?? data.totalAmount ?? 0;
+        const totalAmount =
+          typeof rawTotal === "string" ? parseFloat(rawTotal) : rawTotal;
+
+        // coerce vat -> Number
+        const rawVat = data.vat ?? 0;
+        const vat = typeof rawVat === "string" ? parseFloat(rawVat) : rawVat;
+
+        // compute net = total − vat
+        const net = totalAmount - vat;
+
+        const orderStatus = data.orderStatus || data.status || "Pending";
+
+        // figure out buyerId
+        const buyerId =
+          data.buyerId ||
+          data.customer?.uid ||
+          data.items?.[0]?.buyerId ||
+          null;
 
         filtered.push({
           id: docSnap.id,
-          sadadNumber: data.sadadNumber || "N/A",
-          billNumber: data.billNumber || "N/A",
-          totalAmount: data.totalAmount || "0.00",
-          orderStatus: data.orderStatus || "Pending",
+          sadadNumber,
+          billNumber,
+          totalAmount, // guaranteed Number
+          vat, // guaranteed Number
+          net, // computed Number
+          orderStatus,
           createdAt,
-          buyerId: data.items?.[0]?.buyerId || null,
+          buyerId,
         });
       });
 
       setOrders(filtered);
       setLoading(false);
-    };
+    }
 
     fetchSupplierOrders();
   }, [currentUser]);
 
+  // 2) Listen for payment updates...
   useEffect(() => {
+    let firstRun = true;
     const unsub = onSnapshot(collection(db, "payments"), (snapshot) => {
       snapshot.docChanges().forEach((change) => {
+        const bill = change.doc.id;
         const payment = change.doc.data();
-        const billNumber = change.doc.id;
 
-        if (change.type === "added" || change.type === "modified") {
-          setOrders((prev) =>
-            prev.map((order) =>
-              String(order.billNumber) === String(billNumber)
-                ? { ...order, orderStatus: payment.paymentStatus }
-                : order
-            )
+        // update status
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.billNumber === bill
+              ? { ...o, orderStatus: payment.paymentStatus }
+              : o
+          )
+        );
+
+        // toast once per bill on APPROVED
+        if (
+          !firstRun &&
+          payment.paymentStatus === "APPROVED" &&
+          !notifiedBills.has(bill) &&
+          orders.some((o) => o.billNumber === bill)
+        ) {
+          toast.success(
+            `✅ Payment Approved for Order #${bill}: ${payment.paymentAmount} SR`
           );
-
-          if (
-            payment.paymentStatus === "APPROVED" &&
-            !notifiedBills.has(billNumber)
-          ) {
-            toast.success(
-              `✅ Payment Approved for Order #${billNumber}: ${payment.paymentAmount} SR`
-            );
-            setNotifiedBills((prev) => new Set(prev).add(billNumber));
-          }
+          setNotifiedBills((prev) => new Set(prev).add(bill));
         }
       });
+      firstRun = false;
     });
-
     return () => unsub();
-  }, [notifiedBills]);
+  }, [orders, notifiedBills]);
 
   const goToChat = (order) => {
     const chatId = `order_${order.buyerId}_${currentUser.uid}`;
@@ -108,13 +145,12 @@ const SupplierOrdersPage = () => {
     );
   };
 
-  const renderStatusClass = (status) =>
-    status === "APPROVED" ? "text-green-600 font-medium" : "text-yellow-600";
+  const renderStatusClass = (s) =>
+    s === "APPROVED" ? "text-green-600 font-medium" : "text-yellow-600";
 
   return (
     <div className='w-full max-w-6xl mx-auto px-4 py-6'>
       <h2 className='text-2xl font-semibold mb-6'>Supplier Orders</h2>
-
       {loading ? (
         <p className='text-center text-sm text-muted-foreground'>
           Loading orders...
@@ -125,7 +161,7 @@ const SupplierOrdersPage = () => {
         </p>
       ) : (
         <>
-          {/* Desktop Table */}
+          {/* Desktop */}
           <div className='hidden md:block'>
             <Card className='p-4'>
               <Table>
@@ -135,149 +171,131 @@ const SupplierOrdersPage = () => {
                     <TableHead>Bill</TableHead>
                     <TableHead>Net</TableHead>
                     <TableHead>Service Fee (0%)</TableHead>
-                    <TableHead>Billed</TableHead>
+                    <TableHead>Total</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {orders.map((order) => {
-                    const net = parseFloat(order.totalAmount);
-                    const fee = 0;
-                    const billed = net - fee;
-                    return (
-                      <TableRow key={order.id}>
-                        <TableCell>{order.sadadNumber}</TableCell>
-                        <TableCell>{order.billNumber}</TableCell>
-                        <TableCell>{net.toFixed(2)} SR</TableCell>
-                        <TableCell>{fee.toFixed(2)} SR</TableCell>
-                        <TableCell>{billed.toFixed(2)} SR</TableCell>
-                        <TableCell
-                          className={renderStatusClass(order.orderStatus)}
+                  {orders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell>{order.sadadNumber}</TableCell>
+                      <TableCell>{order.billNumber}</TableCell>
+                      <TableCell>{order.net.toFixed(2)} SR</TableCell>
+                      <TableCell>{(0).toFixed(2)} SR</TableCell>
+                      <TableCell>{order.totalAmount.toFixed(2)} SR</TableCell>
+                      <TableCell
+                        className={renderStatusClass(order.orderStatus)}
+                      >
+                        {order.orderStatus}
+                      </TableCell>
+                      <TableCell>{order.createdAt}</TableCell>
+                      <TableCell className='space-x-2'>
+                        <Link
+                          href={
+                            order.orderStatus === "APPROVED"
+                              ? `/review-invoice/${order.billNumber}`
+                              : "#"
+                          }
                         >
-                          {order.orderStatus}
-                        </TableCell>
-                        <TableCell>{order.createdAt}</TableCell>
-                        <TableCell className='space-x-2'>
-                          <Link
-                            href={
-                              order.orderStatus === "APPROVED"
-                                ? `/review-invoice/${order.billNumber}`
-                                : "#"
-                            }
-                          >
-                            <Button
-                              size='sm'
-                              variant={
-                                order.orderStatus === "APPROVED"
-                                  ? "default"
-                                  : "secondary"
-                              }
-                              disabled={order.orderStatus !== "APPROVED"}
-                            >
-                              Review Invoice
-                            </Button>
-                          </Link>
-
                           <Button
                             size='sm'
-                            variant='outline'
-                            onClick={() => goToChat(order)}
-                            onMouseEnter={() => setHoveredOrderId(order.id)}
-                            onMouseLeave={() => setHoveredOrderId(null)}
-                            className={`transition ${
-                              hoveredOrderId === order.id
-                                ? "bg-[#2c6449] text-white"
-                                : ""
-                            } border-[#2c6449] text-[#2c6449]`}
+                            variant={
+                              order.orderStatus === "APPROVED"
+                                ? "default"
+                                : "secondary"
+                            }
+                            disabled={order.orderStatus !== "APPROVED"}
                           >
-                            Contact Buyer
+                            Review Invoice
                           </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                        </Link>
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          onClick={() => goToChat(order)}
+                          onMouseEnter={() => setHoveredOrderId(order.id)}
+                          onMouseLeave={() => setHoveredOrderId(null)}
+                          className={`transition ${
+                            hoveredOrderId === order.id
+                              ? "bg-[#2c6449] text-white"
+                              : ""
+                          } border-[#2c6449] text-[#2c6449]`}
+                        >
+                          Contact Buyer
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </Card>
           </div>
 
-          {/* Mobile Cards */}
+          {/* Mobile */}
           <div className='md:hidden space-y-4'>
-            {orders.map((order) => {
-              const net = parseFloat(order.totalAmount);
-              const fee = 0;
-              const billed = net - fee;
-
-              return (
-                <Card key={order.id} className='p-4 shadow-md'>
-                  <h3 className='text-sm font-medium mb-2'>
-                    Invoice:{" "}
-                    <span className='text-muted-foreground'>
-                      {order.billNumber}
-                    </span>
-                  </h3>
-                  <p className='text-sm text-muted-foreground'>
-                    SADAD: {order.sadadNumber}
-                  </p>
-                  <p className='text-sm text-muted-foreground'>
-                    Net: {net.toFixed(2)} SR
-                  </p>
-                  <p className='text-sm text-muted-foreground'>
-                    Service Fee: {fee.toFixed(2)} SR
-                  </p>
-                  <p className='text-sm text-muted-foreground'>
-                    Billed: {billed.toFixed(2)} SR
-                  </p>
-                  <p className='text-sm text-muted-foreground'>
-                    Status:{" "}
-                    <span className={renderStatusClass(order.orderStatus)}>
-                      {order.orderStatus}
-                    </span>
-                  </p>
-                  <p className='text-sm text-muted-foreground mb-2'>
-                    Date: {order.createdAt}
-                  </p>
-
-                  <Link
-                    href={
-                      order.orderStatus === "APPROVED"
-                        ? `/review-invoice/${order.billNumber}`
-                        : "#"
-                    }
-                  >
-                    <Button
-                      size='sm'
-                      className='w-full mb-2'
-                      disabled={order.orderStatus !== "APPROVED"}
-                    >
-                      Review Invoice
-                    </Button>
-                  </Link>
-
+            {orders.map((order) => (
+              <Card key={order.id} className='p-4 shadow-md'>
+                <h3 className='text-sm font-medium mb-2'>
+                  Invoice:{" "}
+                  <span className='text-muted-foreground'>
+                    {order.billNumber}
+                  </span>
+                </h3>
+                <p className='text-sm text-muted-foreground'>
+                  SADAD: {order.sadadNumber}
+                </p>
+                <p className='text-sm text-muted-foreground'>
+                  Net: {order.net.toFixed(2)} SR
+                </p>
+                <p className='text-sm text-muted-foreground'>
+                  Service Fee: {(0).toFixed(2)} SR
+                </p>
+                <p className='text-sm text-muted-foreground'>
+                  Total: {order.totalAmount.toFixed(2)} SR
+                </p>
+                <p className='text-sm text-muted-foreground'>
+                  Status:{" "}
+                  <span className={renderStatusClass(order.orderStatus)}>
+                    {order.orderStatus}
+                  </span>
+                </p>
+                <p className='text-sm text-muted-foreground mb-2'>
+                  Date: {order.createdAt}
+                </p>
+                <Link
+                  href={
+                    order.orderStatus === "APPROVED"
+                      ? `/review-invoice/${order.billNumber}`
+                      : "#"
+                  }
+                >
                   <Button
                     size='sm'
-                    variant='outline'
-                    onClick={() => goToChat(order)}
-                    onMouseEnter={() => setHoveredOrderId(order.id)}
-                    onMouseLeave={() => setHoveredOrderId(null)}
-                    className={`w-full ${
-                      hoveredOrderId === order.id
-                        ? "bg-[#2c6449] text-white"
-                        : ""
-                    } border-[#2c6449] text-[#2c6449]`}
+                    className='w-full mb-2'
+                    disabled={order.orderStatus !== "APPROVED"}
                   >
-                    Contact Buyer
+                    Review Invoice
                   </Button>
-                </Card>
-              );
-            })}
+                </Link>
+                <Button
+                  size='sm'
+                  variant='outline'
+                  onClick={() => goToChat(order)}
+                  onMouseEnter={() => setHoveredOrderId(order.id)}
+                  onMouseLeave={() => setHoveredOrderId(null)}
+                  className={`w-full ${
+                    hoveredOrderId === order.id ? "bg-[#2c6449] text-white" : ""
+                  } border-[#2c6449] text-[#2c6449]`}
+                >
+                  Contact Buyer
+                </Button>
+              </Card>
+            ))}
           </div>
         </>
       )}
     </div>
   );
-};
-
-export default SupplierOrdersPage;
+}
