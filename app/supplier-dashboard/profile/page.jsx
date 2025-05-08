@@ -11,54 +11,66 @@ import {
 import { db } from "@/firebase/config";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 
 export default function ManageProfiles() {
   const { currentUser } = useAuth();
-
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    address: "",
-    role: "",
+    nameEn: "",
+    nameAr: "",
+    addressEn: "",
+    addressAr: "",
+    companyDescriptionEn: "",
+    companyDescriptionAr: "",
     crNumber: "",
     vatNumber: "",
+    email: "",
+    role: "",
     logoUrl: "",
-    companyDescription: "",
+    crDocUrl: "",
+    vatDocUrl: "",
+    brochureUrls: [], // ← multiple brochures
     bankDetails: [],
   });
-
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
-  const fetchProfile = async () => {
-    if (!currentUser) return;
-
-    try {
-      const docRef = doc(db, "users", currentUser.uid);
-      const snap = await getDoc(docRef);
-      if (snap.exists()) {
-        const data = snap.data();
-        setFormData({
-          ...formData,
-          ...data,
-          bankDetails: data.bankDetails || [],
-        });
-      }
-    } catch (err) {
-      toast.error("Failed to load profile.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // ─── Fetch existing profile ───────────────────────────
   useEffect(() => {
-    fetchProfile();
+    if (!currentUser) return;
+    (async () => {
+      const snap = await getDoc(doc(db, "users", currentUser.uid));
+      if (snap.exists()) {
+        const d = snap.data();
+        setFormData((f) => ({
+          ...f,
+          nameEn: d.nameEn || d.name || "",
+          nameAr: d.nameAr || "",
+          addressEn: d.addressEn || d.address || "",
+          addressAr: d.addressAr || "",
+          companyDescriptionEn:
+            d.companyDescriptionEn || d.companyDescription || "",
+          companyDescriptionAr: d.companyDescriptionAr || "",
+          crNumber: d.crNumber || "",
+          vatNumber: d.vatNumber || "",
+          email: d.email || "",
+          role: d.role || "",
+          logoUrl: d.logoUrl || "",
+          crDocUrl: d.crDocUrl || "",
+          vatDocUrl: d.vatDocUrl || "",
+          brochureUrls:
+            d.brochureUrls || (d.brochureUrl ? [d.brochureUrl] : []),
+          bankDetails: d.bankDetails || [],
+        }));
+      }
+      setLoading(false);
+    })();
   }, [currentUser]);
 
   const handleChange = (e) => {
@@ -66,18 +78,24 @@ export default function ManageProfiles() {
     setFormData((f) => ({ ...f, [name]: value }));
   };
 
-  const handleLogoUpload = async (file) => {
+  // ─── Upload logo ──────────────────────────────────────
+  const handleLogoUpload = (file) => {
     if (!file || !currentUser?.uid) return;
     setUploading(true);
-
     const storage = getStorage();
-    const fileRef = ref(storage, `logos/${currentUser.uid}/${file.name}`);
+    const fileRef = ref(
+      storage,
+      `profiles/${currentUser.uid}/logo/${file.name}`
+    );
     const uploadTask = uploadBytesResumable(fileRef, file);
 
     uploadTask.on(
       "state_changed",
       null,
-      () => toast.error("Upload failed."),
+      () => {
+        toast.error("Logo upload failed.");
+        setUploading(false);
+      },
       async () => {
         const url = await getDownloadURL(uploadTask.snapshot.ref);
         setFormData((f) => ({ ...f, logoUrl: url }));
@@ -87,69 +105,181 @@ export default function ManageProfiles() {
     );
   };
 
+  // ─── Upload CR / VAT docs ────────────────────────────
+  const handleFileUpload = (file, key) => {
+    if (!file || !currentUser?.uid) return;
+    setUploading(true);
+    const storage = getStorage();
+    const fileRef = ref(
+      storage,
+      `profiles/${currentUser.uid}/${key}/${file.name}`
+    );
+    const uploadTask = uploadBytesResumable(fileRef, file);
+
+    uploadTask.on(
+      "state_changed",
+      null,
+      () => {
+        toast.error(`${key} upload failed.`);
+        setUploading(false);
+      },
+      async () => {
+        const url = await getDownloadURL(uploadTask.snapshot.ref);
+        setFormData((f) => ({ ...f, [key]: url }));
+        toast.success(`${key} uploaded!`);
+        setUploading(false);
+      }
+    );
+  };
+
+  // ─── Upload multiple brochures ───────────────────────
+  const handleBrochureUpload = (file, idx) => {
+    if (!file || !currentUser?.uid) return;
+    setUploading(true);
+    const storage = getStorage();
+    const fileRef = ref(
+      storage,
+      `profiles/${currentUser.uid}/brochures/${file.name}`
+    );
+    const uploadTask = uploadBytesResumable(fileRef, file);
+
+    uploadTask.on(
+      "state_changed",
+      null,
+      () => {
+        toast.error("Brochure upload failed.");
+        setUploading(false);
+      },
+      async () => {
+        const url = await getDownloadURL(uploadTask.snapshot.ref);
+        setFormData((f) => {
+          const arr = [...f.brochureUrls];
+          arr[idx] = url;
+          return { ...f, brochureUrls: arr };
+        });
+        toast.success("Brochure uploaded!");
+        setUploading(false);
+      }
+    );
+  };
+
+  // ─── Save all changes ─────────────────────────────────
   const handleSave = async () => {
     if (!currentUser) return;
-
     try {
       await updateDoc(doc(db, "users", currentUser.uid), {
-        ...formData,
+        nameEn: formData.nameEn,
+        nameAr: formData.nameAr,
+        addressEn: formData.addressEn,
+        addressAr: formData.addressAr,
+        companyDescriptionEn: formData.companyDescriptionEn,
+        companyDescriptionAr: formData.companyDescriptionAr,
+        crNumber: formData.crNumber,
+        vatNumber: formData.vatNumber,
+        logoUrl: formData.logoUrl,
+        crDocUrl: formData.crDocUrl,
+        vatDocUrl: formData.vatDocUrl,
+        brochureUrls: formData.brochureUrls,
+        bankDetails: formData.bankDetails,
       });
       toast.success("Profile updated!");
       setIsEditing(false);
-    } catch (err) {
+    } catch {
       toast.error("Failed to update profile.");
     }
   };
 
-  if (loading) return <p className='text-center text-muted'>Loading...</p>;
+  if (loading) return <p className='text-center text-muted'>Loading…</p>;
 
   return (
-    <Card className='max-w-4xl mx-auto my-8'>
+    <Card className='max-w-4xl mx-auto my-8 p-4'>
       <CardHeader>
         <CardTitle>Manage Profile</CardTitle>
       </CardHeader>
-
       <CardContent className='space-y-6'>
+        {/* Name */}
         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
           <div>
-            <Label>Name</Label>
+            <Label>Name (EN)</Label>
             <Input
-              name='name'
-              value={formData.name}
+              className='w-full'
+              name='nameEn'
+              value={formData.nameEn}
               onChange={handleChange}
               disabled={!isEditing}
             />
           </div>
-          <div>
-            <Label>Email</Label>
+          <div className='text-right'>
+            <Label className='float-right'>الاسم (ع)</Label>
             <Input
-              name='email'
-              value={formData.email}
+              className='w-full text-right'
+              name='nameAr'
+              value={formData.nameAr}
               onChange={handleChange}
-              disabled
+              disabled={!isEditing}
+              dir='rtl'
             />
           </div>
+        </div>
+
+        {/* Address */}
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
           <div>
-            <Label>Role</Label>
+            <Label>Address (EN)</Label>
             <Input
-              name='role'
-              value={formData.role}
-              onChange={handleChange}
-              disabled
-            />
-          </div>
-          <div>
-            <Label>Address</Label>
-            <Input
-              name='address'
-              value={formData.address}
+              className='w-full'
+              name='addressEn'
+              value={formData.addressEn}
               onChange={handleChange}
               disabled={!isEditing}
             />
           </div>
+          <div className='text-right'>
+            <Label className='float-right'>العنوان (ع)</Label>
+            <Input
+              className='w-full text-right'
+              name='addressAr'
+              value={formData.addressAr}
+              onChange={handleChange}
+              disabled={!isEditing}
+              dir='rtl'
+            />
+          </div>
+        </div>
+
+        {/* Company Description */}
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+          <div>
+            <Label>Description (EN)</Label>
+            <Textarea
+              className='w-full'
+              name='companyDescriptionEn'
+              value={formData.companyDescriptionEn}
+              onChange={handleChange}
+              disabled={!isEditing}
+              rows={4}
+            />
+          </div>
+          <div className='text-right'>
+            <Label className='float-right'>الوصف (ع)</Label>
+            <Textarea
+              className='w-full text-right'
+              name='companyDescriptionAr'
+              value={formData.companyDescriptionAr}
+              onChange={handleChange}
+              disabled={!isEditing}
+              rows={4}
+              dir='rtl'
+            />
+          </div>
+        </div>
+
+        {/* CR & VAT Numbers */}
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
           <div>
             <Label>CR Number</Label>
             <Input
+              className='w-full'
               name='crNumber'
               value={formData.crNumber}
               onChange={handleChange}
@@ -159,6 +289,7 @@ export default function ManageProfiles() {
           <div>
             <Label>VAT Number</Label>
             <Input
+              className='w-full'
               name='vatNumber'
               value={formData.vatNumber}
               onChange={handleChange}
@@ -167,46 +298,151 @@ export default function ManageProfiles() {
           </div>
         </div>
 
-        <div>
-          <Label>Company Description</Label>
-          <Textarea
-            name='companyDescription'
-            value={formData.companyDescription}
-            onChange={handleChange}
-            rows={4}
-            disabled={!isEditing}
-          />
-        </div>
-
-        <div>
-          <Label>Logo</Label>
-          {formData.logoUrl && (
-            <img
-              src={formData.logoUrl}
-              alt='Company Logo'
-              className='w-32 h-32 object-contain mb-2'
+        {/* Logo + Documents */}
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+          {/* Logo */}
+          <div>
+            <Label>Logo</Label>
+            {formData.logoUrl && (
+              <img
+                src={formData.logoUrl}
+                alt='Company Logo'
+                className='w-24 h-24 md:w-32 md:h-32 object-contain mb-2'
+              />
+            )}
+            <Input
+              className='w-full'
+              type='file'
+              accept='image/*'
+              onChange={(e) => handleLogoUpload(e.target.files[0])}
+              disabled={!isEditing || uploading}
             />
-          )}
-          <Input
-            type='file'
-            accept='image/*'
-            onChange={(e) => handleLogoUpload(e.target.files[0])}
-            disabled={!isEditing}
-          />
+          </div>
+
+          {/* Documents */}
+          <div>
+            <Label>Company Docs</Label>
+            <div className='space-y-4'>
+              {/* CR Document */}
+              <div>
+                <Label>CR Document (PDF/JPG)</Label>
+                {formData.crDocUrl && (
+                  <a
+                    href={formData.crDocUrl}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='block text-sm text-blue-600 underline mb-1'
+                  >
+                    View existing CR
+                  </a>
+                )}
+                <Input
+                  className='w-full'
+                  type='file'
+                  accept='.pdf,.jpg,.jpeg'
+                  onChange={(e) =>
+                    handleFileUpload(e.target.files[0], "crDocUrl")
+                  }
+                  disabled={!isEditing || uploading}
+                />
+              </div>
+
+              {/* VAT Registration */}
+              <div>
+                <Label>VAT Registration (PDF/JPG)</Label>
+                {formData.vatDocUrl && (
+                  <a
+                    href={formData.vatDocUrl}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='block text-sm text-blue-600 underline mb-1'
+                  >
+                    View existing VAT
+                  </a>
+                )}
+                <Input
+                  className='w-full'
+                  type='file'
+                  accept='.pdf,.jpg,.jpeg'
+                  onChange={(e) =>
+                    handleFileUpload(e.target.files[0], "vatDocUrl")
+                  }
+                  disabled={!isEditing || uploading}
+                />
+              </div>
+
+              {/* Multiple Brochures */}
+              <div>
+                <Label>Brochures/Profiles (PDF/JPG)</Label>
+                <div className='space-y-4'>
+                  {formData.brochureUrls.map((url, idx) => (
+                    <div key={idx}>
+                      {url && (
+                        <a
+                          href={url}
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          className='block text-sm text-blue-600 underline mb-1'
+                        >
+                          View Brochure {idx + 1}
+                        </a>
+                      )}
+                      <Input
+                        className='w-full'
+                        type='file'
+                        accept='.pdf,.jpg,.jpeg'
+                        onChange={(e) =>
+                          handleBrochureUpload(e.target.files[0], idx)
+                        }
+                        disabled={!isEditing || uploading}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  className='mt-2 w-full md:w-auto'
+                  variant='outline'
+                  onClick={() =>
+                    setFormData((f) => ({
+                      ...f,
+                      brochureUrls: [...f.brochureUrls, ""],
+                    }))
+                  }
+                  disabled={!isEditing}
+                >
+                  + Add
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className='flex items-center gap-4'>
+        {/* Actions */}
+        <div className='flex flex-col sm:flex-row items-center gap-4'>
           {isEditing ? (
             <>
-              <Button onClick={handleSave} disabled={uploading}>
+              <Button
+                className='w-full sm:w-auto'
+                onClick={handleSave}
+                disabled={uploading}
+              >
                 Save
               </Button>
-              <Button variant='outline' onClick={() => setIsEditing(false)}>
+              <Button
+                className='w-full sm:w-auto'
+                variant='outline'
+                onClick={() => setIsEditing(false)}
+              >
                 Cancel
               </Button>
             </>
           ) : (
-            <Button onClick={() => setIsEditing(true)}>Edit Profile</Button>
+            <Button
+              className='w-full sm:w-auto'
+              onClick={() => setIsEditing(true)}
+            >
+              Edit Profile
+            </Button>
           )}
         </div>
       </CardContent>

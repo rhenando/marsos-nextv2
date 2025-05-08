@@ -209,7 +209,7 @@ const CartPage = () => {
 
               <div className='flex flex-col md:flex-row gap-2 w-full md:w-auto'>
                 <Button
-                  onClick={() => router.push("/checkout")}
+                  onClick={() => router.push(`/checkout/${supplierId}`)}
                   className='bg-[#2c6449] text-white text-sm py-2 px-3 w-full md:w-auto'
                 >
                   Proceed to Checkout
@@ -225,7 +225,7 @@ const CartPage = () => {
                 <Button
                   variant='outline'
                   className='text-sm py-2 px-3 w-full md:w-auto'
-                  onClick={() => router.push("/review-order")}
+                  onClick={() => router.push(`/checkout/${supplierId}`)}
                 >
                   Review Order
                 </Button>

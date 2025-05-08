@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { getAuth } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/firebase/config";
+import Link from "next/link";
 
 export default function ProductDetailsPage() {
   const { id } = useParams();
@@ -271,7 +272,12 @@ export default function ProductDetailsPage() {
             {t("product_card.category")}: {category}
           </p>
           <p className='text-sm text-gray-600 mb-4'>
-            {t("product_card.supplier")}: {product.supplierName || "N/A"}
+            {t("product_card.supplier")}:
+            <Link href={`/supplier/${product.supplierId}`}>
+              <span className='ml-1 text-[#2c6449] hover:underline cursor-pointer'>
+                {product.supplierName || "N/A"}
+              </span>
+            </Link>
           </p>
 
           {priceRanges?.length > 0 && (

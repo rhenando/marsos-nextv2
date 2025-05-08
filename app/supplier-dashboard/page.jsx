@@ -12,13 +12,11 @@ export default function SupplierDashboardPage() {
         <Card>
           <CardHeader className='flex justify-between items-center'>
             <CardTitle className='text-sm'>Total Sales</CardTitle>
-            <DollarSign className='h-4 w-4 text-muted-foreground' />
+            {/* <DollarSign className='h-4 w-4 text-muted-foreground' /> */}
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>$7,920</div>
-            <p className='text-sm text-muted-foreground'>
-              +12.4% from last month
-            </p>
+            <div className='text-2xl font-bold'>0</div>
+            <p className='text-sm text-muted-foreground'>0% from last month</p>
           </CardContent>
         </Card>
 
@@ -28,8 +26,8 @@ export default function SupplierDashboardPage() {
             <Users className='h-4 w-4 text-muted-foreground' />
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>142</div>
-            <p className='text-sm text-muted-foreground'>+5.2% this week</p>
+            <div className='text-2xl font-bold'>0</div>
+            <p className='text-sm text-muted-foreground'>0% this week</p>
           </CardContent>
         </Card>
 
@@ -39,8 +37,8 @@ export default function SupplierDashboardPage() {
             <CreditCard className='h-4 w-4 text-muted-foreground' />
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>79</div>
-            <p className='text-sm text-muted-foreground'>+8.7% this month</p>
+            <div className='text-2xl font-bold'>0</div>
+            <p className='text-sm text-muted-foreground'>0% this month</p>
           </CardContent>
         </Card>
 
@@ -50,7 +48,7 @@ export default function SupplierDashboardPage() {
             <Activity className='h-4 w-4 text-muted-foreground' />
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>92%</div>
+            <div className='text-2xl font-bold'>0%</div>
             <p className='text-sm text-muted-foreground'>
               Compared to last week
             </p>
