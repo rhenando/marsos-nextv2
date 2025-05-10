@@ -52,9 +52,10 @@ const Header = ({ setShowRFQModal }) => {
   const handleLogout = async () => {
     try {
       await dispatch(logout()).unwrap();
-      router.push("/user-login");
-    } catch (error) {
-      console.error("Logout failed:", error);
+      // full reload, clears out any stale Recaptcha or client state:
+      window.location.href = "/user-login";
+    } catch (err) {
+      console.error(err);
     }
   };
 
