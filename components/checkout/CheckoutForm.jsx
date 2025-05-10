@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+
 import { useRouter } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
 
@@ -56,17 +57,9 @@ export default function CheckoutForm({ supplierId }) {
   const loading = useSelector((state) => state.checkout.loading);
   const error = useSelector((state) => state.checkout.error);
 
-  // 5️⃣ redirect if no user or no items
-  useEffect(() => {
-    if (!user) {
-      toast.error("Please log in");
-      router.push("/user-login");
-      return;
-    }
-    if (items.length === 0) {
-      router.push("/cart");
-    }
-  }, [user, items.length, router]);
+  // pull total count so we know if *any* items remain in cart
+  const totalCartCount = useSelector((state) => state.cart.count);
+  const [justNavigated, setJustNavigated] = useState(false);
 
   // 6️⃣ form field handler
   function handleChange(e) {
@@ -78,6 +71,13 @@ export default function CheckoutForm({ supplierId }) {
       })
     );
   }
+
+  useEffect(() => {
+    if (!user) {
+      toast.error("Please log in");
+      router.push("/user-login");
+    }
+  }, [user, router]);
 
   // 7️⃣ onPay: create order, reset checkout, clear *this* supplier’s cart items
   function onPay() {

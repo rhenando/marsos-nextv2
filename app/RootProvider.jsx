@@ -1,4 +1,3 @@
-// app/RootProvider.jsx
 "use client";
 
 import React, { useEffect } from "react";
@@ -8,6 +7,7 @@ import { store } from "@/store/store";
 import "../i18n";
 
 import { watchAuthState } from "@/store/authSlice";
+import { fetchCart } from "@/store/cartSlice"; // ← import your new thunk
 import { LoadingProvider } from "@/context/LoadingContext";
 import { LocalizationProvider } from "@/context/LocalizationContext";
 
@@ -38,19 +38,30 @@ function AuthWatcher({ children }) {
   return children;
 }
 
+// 1.5️⃣ Reload cart whenever we get a non-null user
+function CartRefresher({ children }) {
+  const dispatch = useDispatch();
+  const { user, loading: authLoading } = useSelector((s) => s.auth);
+  useEffect(() => {
+    if (!authLoading && user?.uid) {
+      dispatch(fetchCart(user.uid));
+    }
+  }, [authLoading, user, dispatch]);
+  return children;
+}
+
 // 2️⃣ Layout reads loading from Redux
 function AppLayout({ children }) {
   const loading = useSelector((state) => state.auth.loading);
   const [showSticky, setShowSticky] = React.useState(false);
   const [showRFQModal, setShowRFQModal] = React.useState(false);
 
-  // --- ALWAYS run your hooks, before any return
+  // scroll & lenis
   useEffect(() => {
     const onScroll = () => setShowSticky(window.scrollY > 100);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
   useEffect(() => {
     const lenis = new Lenis({
       duration: 1.2,
@@ -66,16 +77,14 @@ function AppLayout({ children }) {
     return () => lenis.destroy();
   }, []);
 
-  // --- only now bail out if still loading
   if (loading) {
     return (
       <div className='min-h-screen flex items-center justify-center'>
-        <span className='text-muted-foreground text-sm'></span>
+        <span className='text-muted-foreground text-sm'>Loading…</span>
       </div>
     );
   }
 
-  // --- normal UI once ready
   return (
     <>
       <AnimatePresence mode='wait'>
@@ -120,12 +129,14 @@ export default function RootProvider({ children }) {
   return (
     <Provider store={store}>
       <AuthWatcher>
-        <LoadingProvider>
-          <LocalizationProvider>
-            <GlobalLoading />
-            <AppLayout>{children}</AppLayout>
-          </LocalizationProvider>
-        </LoadingProvider>
+        <CartRefresher>
+          <LoadingProvider>
+            <LocalizationProvider>
+              <GlobalLoading />
+              <AppLayout>{children}</AppLayout>
+            </LocalizationProvider>
+          </LoadingProvider>
+        </CartRefresher>
       </AuthWatcher>
     </Provider>
   );

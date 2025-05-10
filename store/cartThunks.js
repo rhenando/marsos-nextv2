@@ -1,23 +1,37 @@
 // store/cartThunks.js
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import { writeBatch, doc } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
 import { db } from "@/firebase/config";
 import { removeSupplierItems } from "./cartSlice";
 
 export const clearSupplierCart = createAsyncThunk(
   "cart/clearSupplierCart",
-  async ({ userId, supplierId, items }, { dispatch }) => {
-    // 1) batch-delete all Firestore docs for this supplier
-    const batch = writeBatch(db);
-    items
-      .filter((i) => i.supplierId === supplierId)
-      .forEach((i) => {
-        const ref = doc(db, "carts", userId, "items", i.id);
-        batch.delete(ref);
-      });
-    await batch.commit();
+  async ({ userId, supplierId }, { dispatch, rejectWithValue }) => {
+    try {
+      // 1️⃣ find all that supplier's cart items in Firestore
+      const q = query(
+        collection(db, "carts", userId, "items"),
+        where("supplierId", "==", supplierId)
+      );
+      const snap = await getDocs(q);
 
-    // 2) update Redux immediately
-    dispatch(removeSupplierItems(supplierId));
+      // 2️⃣ delete each one
+      await Promise.all(
+        snap.docs.map((d) => deleteDoc(doc(db, "carts", userId, "items", d.id)))
+      );
+
+      // 3️⃣ update Redux to drop them
+      dispatch(removeSupplierItems(supplierId));
+    } catch (err) {
+      console.error("Failed to clear supplier cart:", err);
+      return rejectWithValue(err.message);
+    }
   }
 );

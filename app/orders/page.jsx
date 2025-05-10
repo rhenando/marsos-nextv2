@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 
-import { useAuth } from "@/context/AuthContext";
+import { useSelector } from "react-redux";
 import BuyerProfile from "@/components/buyer/BuyerProfile";
 import Orders from "@/components/buyer/orders/Orders";
 import UserMessages from "@/components/supplier-buyer/UserMessages";
@@ -20,7 +20,7 @@ import {
 } from "react-feather";
 
 const Dashboard = () => {
-  const { userData } = useAuth();
+  const { user: userData, loading } = useSelector((state) => state.auth);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedPage, setSelectedPage] = useState("home");
 

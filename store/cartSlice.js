@@ -11,11 +11,31 @@ import {
 } from "firebase/firestore";
 import { db } from "@/firebase/config";
 
+// fetchCart thunk: convert Timestamp → number
+export const fetchCart = createAsyncThunk(
+  "cart/fetchCart",
+  async (userId, { rejectWithValue, dispatch }) => {
+    try {
+      const snap = await getDocs(collection(db, "carts", userId, "items"));
+      const items = snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ...data,
+          createdAt: data.createdAt?.toMillis?.() ?? null,
+        };
+      });
+      dispatch(setCartItems(items));
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
 export const addOrUpdateCartItem = createAsyncThunk(
   "cart/addOrUpdateCartItem",
   async ({ userId, item }, { rejectWithValue }) => {
     try {
-      // 1) see if there's already an item with same product, size, color, location
       const q = query(
         collection(db, "carts", userId, "items"),
         where("productId", "==", item.productId),
@@ -25,7 +45,6 @@ export const addOrUpdateCartItem = createAsyncThunk(
       );
       const snap = await getDocs(q);
       if (!snap.empty) {
-        // update existing
         const existing = snap.docs[0];
         const data = existing.data();
         const newQty = data.quantity + item.quantity;
@@ -34,7 +53,6 @@ export const addOrUpdateCartItem = createAsyncThunk(
           subtotal: newQty * item.price,
         });
       } else {
-        // create new
         const itemId = `${item.productId}-${Date.now()}`;
         await setDoc(doc(db, "carts", userId, "items", itemId), {
           ...item,
@@ -50,7 +68,12 @@ export const addOrUpdateCartItem = createAsyncThunk(
 
 const cartSlice = createSlice({
   name: "cart",
-  initialState: { items: [], count: 0, loading: false, error: null },
+  initialState: {
+    items: [],
+    count: 0,
+    loading: false,
+    error: null,
+  },
   reducers: {
     setCartItems(state, action) {
       state.items = action.payload;
@@ -60,7 +83,6 @@ const cartSlice = createSlice({
       state.items = [];
       state.count = 0;
     },
-    // Remove all items from a specific supplier
     removeSupplierItems(state, action) {
       state.items = state.items.filter(
         (item) => item.supplierId !== action.payload
@@ -70,6 +92,17 @@ const cartSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      .addCase(fetchCart.pending, (s) => {
+        s.loading = true;
+        s.error = null;
+      })
+      .addCase(fetchCart.fulfilled, (s) => {
+        s.loading = false;
+      })
+      .addCase(fetchCart.rejected, (s, a) => {
+        s.loading = false;
+        s.error = a.payload;
+      })
       .addCase(addOrUpdateCartItem.pending, (s) => {
         s.loading = true;
         s.error = null;
