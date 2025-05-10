@@ -1,12 +1,15 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "@/firebase/config";
 import { toast } from "sonner";
-import { useCart } from "@/context/CartContext";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useDispatch } from "react-redux";
+import { clearCartItems } from "@/store/cartSlice";
 
 export const usePlaceOrder = () => {
-  const { clearCart } = useCart();
+  const dispatch = useDispatch();
   const router = useRouter();
   const [isPlacing, setIsPlacing] = useState(false);
 
@@ -23,8 +26,8 @@ export const usePlaceOrder = () => {
           (sum, item) => sum + (item.shippingCost || 0),
           0
         );
-        const vat = (subtotal + shipping) * 0.15;
-        const total = subtotal + shipping + vat;
+        const vat = Number(((subtotal + shipping) * 0.15).toFixed(2));
+        const total = Number((subtotal + shipping + vat).toFixed(2));
 
         await addDoc(collection(db, "orders"), {
           buyerId: userId,
@@ -39,7 +42,9 @@ export const usePlaceOrder = () => {
         });
       }
 
-      await clearCart();
+      // Clear cart in Redux
+      await dispatch(clearCartItems(userId)).unwrap();
+
       toast.success("Order placed successfully!");
       router.push("/orders");
     } catch (error) {

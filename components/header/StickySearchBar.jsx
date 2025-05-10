@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 
-import { useAuth } from "../../context/AuthContext";
-import { useCart } from "../../context/CartContext";
+import { useSelector, useDispatch } from "react-redux";
+import { logout as logoutAction } from "@/store/authSlice";
 
 import RfqModal from "../rfq/Rfq";
 import ProductSearch from "@/components/header/ProductSearch";
@@ -28,21 +28,25 @@ import {
 import { useLocalization } from "@/context/LocalizationContext";
 
 const StickySearchBar = () => {
-  const { cartItemCount, userRole } = useCart();
-  const { currentUser, logout } = useAuth();
-  const pathname = usePathname();
+  const dispatch = useDispatch();
   const router = useRouter();
-  const [showRFQModal, setShowRFQModal] = useState(false);
-
-  const { selectedCountry } = useLocalization();
+  const pathname = usePathname();
   const { t } = useTranslation();
+  const { selectedCountry } = useLocalization();
+
+  // pull cart count and auth user from Redux
+  const cartItemCount = useSelector((state) => state.cart.count);
+  const user = useSelector((state) => state.auth.user);
+  const userRole = user?.role;
+
+  const [showRFQModal, setShowRFQModal] = useState(false);
 
   const handleLogout = async () => {
     try {
-      await logout();
+      await dispatch(logoutAction()).unwrap();
       router.push("/user-login");
-    } catch (error) {
-      console.error("Logout failed:", error);
+    } catch (err) {
+      console.error("Logout failed:", err);
     }
   };
 
@@ -58,7 +62,7 @@ const StickySearchBar = () => {
   return (
     <header className='top-0 z-[9999] w-full bg-white/90 backdrop-blur-md shadow-sm'>
       <div className='flex items-center justify-between px-2 sm:px-4 md:px-6 py-3'>
-        {/* Left: Logo */}
+        {/* Logo */}
         <Link href='/' className='flex items-center gap-2'>
           <img
             src='/logo.svg'
@@ -67,12 +71,12 @@ const StickySearchBar = () => {
           />
         </Link>
 
-        {/* Center: Search */}
+        {/* Search */}
         <div className='flex flex-1 mx-2 sm:mx-4 max-w-full sm:max-w-3xl'>
           <ProductSearch />
         </div>
 
-        {/* Right: Desktop Icons */}
+        {/* Desktop Icons */}
         <div className='hidden md:flex items-center gap-4 text-[#2c6449]'>
           {/* Delivery Location */}
           <div className='text-xs flex-col items-center hidden md:flex'>
@@ -87,7 +91,7 @@ const StickySearchBar = () => {
             </span>
           </div>
 
-          {/* User */}
+          {/* User Menu */}
           <Popover>
             <PopoverTrigger asChild>
               <Button variant='ghost' className='flex items-center gap-2'>
@@ -95,16 +99,17 @@ const StickySearchBar = () => {
               </Button>
             </PopoverTrigger>
             <PopoverContent align='end' className='w-40 text-sm'>
-              {currentUser ? (
+              {user ? (
                 <>
                   <Button
                     variant='ghost'
                     className='w-full justify-start'
                     onClick={() => {
                       if (userRole === "buyer") router.push("/buyer-dashboard");
-                      if (userRole === "supplier")
+                      else if (userRole === "supplier")
                         router.push("/supplier-dashboard");
-                      if (userRole === "admin") router.push("/admin-dashboard");
+                      else if (userRole === "admin")
+                        router.push("/admin-dashboard");
                     }}
                   >
                     {t("header.dashboard")}
@@ -168,7 +173,7 @@ const StickySearchBar = () => {
           </Link>
         </div>
 
-        {/* Mobile: Hamburger Menu */}
+        {/* Mobile Hamburger */}
         <div className='flex md:hidden'>
           <Sheet>
             <SheetTrigger asChild>
@@ -184,7 +189,7 @@ const StickySearchBar = () => {
                     {t("header.home")}
                   </Button>
                 </Link>
-                {currentUser ? (
+                {user ? (
                   <>
                     <Button
                       variant='ghost'
@@ -192,9 +197,9 @@ const StickySearchBar = () => {
                       onClick={() => {
                         if (userRole === "buyer")
                           router.push("/buyer-dashboard");
-                        if (userRole === "supplier")
+                        else if (userRole === "supplier")
                           router.push("/supplier-dashboard");
-                        if (userRole === "admin")
+                        else if (userRole === "admin")
                           router.push("/admin-dashboard");
                       }}
                     >

@@ -1,6 +1,10 @@
-// app/admin-dashboard/layout.js
+import RequireAuth from "@/components/RequireAuth";
 import AdminSidebarLayout from "@/components/admin/AdminSidebarLayout";
 
 export default function AdminDashboardLayout({ children }) {
-  return <AdminSidebarLayout>{children}</AdminSidebarLayout>;
+  return (
+    <RequireAuth>
+      <AdminSidebarLayout>{children}</AdminSidebarLayout>
+    </RequireAuth>
+  );
 }

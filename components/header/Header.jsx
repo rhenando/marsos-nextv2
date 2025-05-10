@@ -1,13 +1,16 @@
+// components/header/Header.jsx
 "use client";
 
+import React from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 
-import { useAuth } from "@/context/AuthContext";
-import { useCart } from "@/context/CartContext";
+import { useDispatch, useSelector } from "react-redux";
+import useAuth from "@/hooks/useAuth";
+import { logout } from "@/store/authSlice";
 
-import ProductSearch from "@/components/header/ProductSearch";
 import LanguageSelector from "@/components/header/LanguageSelector";
 
 import { Button } from "../ui/button";
@@ -21,21 +24,34 @@ import {
   ShoppingCart,
   MapPin,
   Send,
-  LogOut,
+  LogOut as LogOutIcon,
   Home,
 } from "react-feather";
 
-const Header = ({ setShowRFQModal }) => {
-  const { cartItemCount } = useCart();
-  const { currentUser, userData, logout, role: userRole, loading } = useAuth();
+// Dynamically import the search so it never SSRs
+const ProductSearch = dynamic(
+  () => import("@/components/header/ProductSearch"),
+  { ssr: false }
+);
 
-  const pathname = usePathname();
-  const router = useRouter();
+const Header = ({ setShowRFQModal }) => {
   const { t } = useTranslation();
+  const dispatch = useDispatch();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Pull auth state from Redux
+  const { loading, user } = useAuth();
+  const currentUser = user;
+  const userRole = user?.role;
+  const userData = user; // if you've stored extra profile info on auth.user
+
+  // Pull cart count from Redux
+  const cartItemCount = useSelector((state) => state.cart.count);
 
   const handleLogout = async () => {
     try {
-      await logout();
+      await dispatch(logout()).unwrap();
       router.push("/user-login");
     } catch (error) {
       console.error("Logout failed:", error);
@@ -53,10 +69,7 @@ const Header = ({ setShowRFQModal }) => {
   }
 
   const displayName =
-    userData?.name ||
-    currentUser?.displayName ||
-    currentUser?.email ||
-    t("header.account");
+    userData?.displayName || userData?.email || t("header.account");
 
   return (
     <header className='z-50 w-full bg-white/90 backdrop-blur-md shadow-sm'>
@@ -216,7 +229,7 @@ const Header = ({ setShowRFQModal }) => {
                       className='w-full justify-start'
                       onClick={handleLogout}
                     >
-                      <LogOut size={16} className='mr-2' />
+                      <LogOutIcon size={16} className='mr-2' />
                       {t("header.logout")}
                     </Button>
                   </>

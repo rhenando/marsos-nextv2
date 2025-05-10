@@ -1,9 +1,18 @@
+// app/page.js
 "use client";
 
-import CategoryGrid from "@/components/home/CategoryGrid";
+import dynamic from "next/dynamic";
 
-import HeroSection from "@/components/home/HeroSection";
-import TrendingProductsSection from "@/components/home/TrendingProductsSection";
+// client-only imports
+const HeroSection = dynamic(() => import("@/components/home/HeroSection"), {
+  ssr: false,
+});
+const TrendingProductsSection = dynamic(
+  () => import("@/components/home/TrendingProductsSection"),
+  { ssr: false }
+);
+
+import CategoryGrid from "@/components/home/CategoryGrid";
 
 export default function Home() {
   return (

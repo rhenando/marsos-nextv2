@@ -1,94 +1,103 @@
 "use client";
 
-import { useCart } from "@/context/CartContext";
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import Currency from "@/components/global/CurrencySymbol";
-import { db } from "@/firebase/config";
-import { doc, setDoc, onSnapshot, collection } from "firebase/firestore";
-import { useAuth } from "@/context/AuthContext";
+import React, { useEffect, useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+
+import { db } from "@/firebase/config";
+import {
+  collection,
+  onSnapshot,
+  doc,
+  setDoc,
+  deleteDoc,
+} from "firebase/firestore";
+
+import { Button } from "@/components/ui/button";
+import Currency from "@/components/global/CurrencySymbol";
 import { useCartNegotiation } from "@/hooks/useCartNegotiation";
 import { usePlaceOrder } from "@/hooks/usePlaceOrder";
 
-const CartPage = () => {
-  const { removeCartItem, cartItemCount } = useCart();
-  const [groupedItems, setGroupedItems] = useState({});
-  const { currentUser } = useAuth();
+import { setCartItems, clearCartItems } from "@/store/cartSlice";
+
+export default function CartPage() {
+  const dispatch = useDispatch();
   const router = useRouter();
   const { startNegotiation } = useCartNegotiation();
   const { placeOrder, isPlacing } = usePlaceOrder();
 
-  useEffect(() => {
-    if (!currentUser) return;
+  // Pull user from Redux instead of useAuth
+  const user = useSelector((state) => state.auth.user);
+  const userId = user?.uid;
 
-    const q = collection(db, "carts", currentUser.uid, "items");
+  // Cart items & count from Redux
+  const cartItems = useSelector((state) => state.cart.items);
+  const cartItemCount = useSelector((state) => state.cart.count);
+
+  // Local grouping state
+  const [groupedItems, setGroupedItems] = useState({});
+
+  // ─── Subscribe to Firestore & sync into Redux ─────────────────────────
+  useEffect(() => {
+    if (!userId) return;
+
+    const q = collection(db, "carts", userId, "items");
     const unsub = onSnapshot(q, (snap) => {
-      const items = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      const grouped = items.reduce((acc, item) => {
-        const key = item.supplierId || "unknown";
-        if (!acc[key]) acc[key] = [];
-        acc[key].push(item);
-        return acc;
-      }, {});
-      setGroupedItems(grouped);
+      const items = snap.docs.map((d) => {
+        const data = d.data();
+        // normalize Timestamp
+        const createdAt = data.createdAt?.toMillis?.() ?? data.createdAt;
+        return {
+          id: d.id,
+          ...data,
+          createdAt,
+        };
+      });
+      dispatch(setCartItems(items));
     });
 
     return () => unsub();
-  }, [currentUser]);
+  }, [userId, dispatch]);
+
+  // ─── Group items by supplier ──────────────────────────────────────────
+  useEffect(() => {
+    const grouped = cartItems.reduce((acc, item) => {
+      const key = item.supplierId || "unknown";
+      (acc[key] ||= []).push(item);
+      return acc;
+    }, {});
+    setGroupedItems(grouped);
+  }, [cartItems]);
+
+  // ─── Handlers ─────────────────────────────────────────────────────────
+  const handleRemove = async (itemId) => {
+    if (!userId) return;
+    await deleteDoc(doc(db, "carts", userId, "items", itemId));
+  };
 
   const handleQuantityChange = async (itemId, value) => {
-    if (value <= 0) {
+    if (value < 1) {
       toast.error("Quantity must be at least 1");
       return;
     }
-
-    const itemRef = doc(db, "carts", currentUser.uid, "items", itemId);
+    const ref = doc(db, "carts", userId, "items", itemId);
     await setDoc(
-      itemRef,
+      ref,
       {
-        quantity: parseFloat(value),
-        subtotal: parseFloat(value),
+        quantity: value,
+        subtotal: value * cartItems.find((i) => i.id === itemId).price,
       },
       { merge: true }
     );
   };
 
-  const handleNegotiate = async (supplierId, items) => {
-    if (!currentUser) return toast.error("Please login to negotiate.");
-    const chatId = `cart_${currentUser.uid}_${supplierId}`;
-    const chatRef = doc(db, "cartChats", chatId);
-
-    try {
-      await setDoc(
-        chatRef,
-        {
-          buyerId: currentUser.uid,
-          supplierId,
-          createdAt: new Date(),
-          status: "pending",
-          cartSnapshot: items.map((item) => ({
-            productId: item.productId,
-            productName: item.productName,
-            quantity: item.quantity,
-            size: item.size,
-            color: item.color,
-            deliveryLocation: item.deliveryLocation,
-            originalPrice: item.price,
-            originalSubtotal: item.subtotal,
-          })),
-        },
-        { merge: true }
-      );
-
-      router.push(`/chat/cart/${chatId}`);
-    } catch (err) {
-      console.error("❌ Negotiation chat error:", err);
-      toast.error("Failed to initiate negotiation.");
-    }
+  const handleClearCart = () => {
+    if (!userId) return;
+    dispatch(clearCartItems());
   };
 
+  // ─── Render ────────────────────────────────────────────────────────────
   if (cartItemCount === 0) {
     return (
       <div className='text-center py-12'>
@@ -113,17 +122,14 @@ const CartPage = () => {
       <h1 className='text-2xl font-bold mb-6 text-[#2c6449]'>Your Cart</h1>
 
       {Object.entries(groupedItems).map(([supplierId, items]) => {
-        const supplierName = items[0].supplierName || "Unknown Supplier";
-        const subtotal = items.reduce(
-          (sum, item) => sum + (item.subtotal || 0),
-          0
-        );
+        const supplierName = items[0]?.supplierName || "Unknown Supplier";
+        const subtotal = items.reduce((sum, i) => sum + (i.subtotal || 0), 0);
         const shipping = items.reduce(
-          (sum, item) => sum + (item.shippingCost || 0),
+          (sum, i) => sum + (i.shippingCost || 0),
           0
         );
-        const vat = (subtotal + shipping) * 0.15;
-        const total = subtotal + shipping + vat;
+        const vat = Number(((subtotal + shipping) * 0.15).toFixed(2));
+        const total = Number((subtotal + shipping + vat).toFixed(2));
 
         return (
           <div
@@ -156,10 +162,7 @@ const CartPage = () => {
                         min={1}
                         value={item.quantity}
                         onChange={(e) =>
-                          handleQuantityChange(
-                            item.id,
-                            parseInt(e.target.value)
-                          )
+                          handleQuantityChange(item.id, +e.target.value)
                         }
                         className='border px-2 py-1 rounded w-18'
                       />
@@ -167,7 +170,7 @@ const CartPage = () => {
                       <Currency amount={item.price} />
                     </div>
                     <p className='text-sm text-gray-500'>
-                      Size: {item.size || "—"} | Color: {item.color || "—"} |
+                      Size: {item.size || "—"} | Color: {item.color || "—"} |{" "}
                       Location: {item.deliveryLocation}
                     </p>
                     <p className='text-sm font-medium text-[#2c6449] mt-1'>
@@ -177,7 +180,7 @@ const CartPage = () => {
                   <Button
                     variant='destructive'
                     className='text-sm py-2 px-3'
-                    onClick={() => removeCartItem(item.id)}
+                    onClick={() => handleRemove(item.id)}
                   >
                     Remove
                   </Button>
@@ -218,10 +221,11 @@ const CartPage = () => {
                 <Button
                   variant='outline'
                   className='text-[#2c6449] border-[#2c6449] text-sm py-2 px-3 w-full md:w-auto'
-                  onClick={() => handleNegotiate(supplierId, items)}
+                  onClick={() => startNegotiation(supplierId, items)}
                 >
                   Contact Supplier to Negotiate
                 </Button>
+
                 <Button
                   variant='outline'
                   className='text-sm py-2 px-3 w-full md:w-auto'
@@ -236,6 +240,4 @@ const CartPage = () => {
       })}
     </div>
   );
-};
-
-export default CartPage;
+}

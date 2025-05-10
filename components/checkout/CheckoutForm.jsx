@@ -1,149 +1,125 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useSelector, useDispatch } from "react-redux";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Currency from "@/components/global/CurrencySymbol";
 import { toast } from "sonner";
-import { useAuth } from "@/context/AuthContext";
-import { useCart } from "@/context/CartContext"; // ← import your cart context
-import { db } from "@/firebase/config";
-import { setDoc, doc } from "firebase/firestore";
 
-const API_BASE = process.env.NEXT_PUBLIC_EXPRESS_URL || "http://localhost:5001";
+import {
+  updateField,
+  setPaymentMethod,
+  createSadadOrder,
+  resetCheckout,
+} from "@/store/checkoutSlice";
 
-export default function CheckoutForm({ supplierId, items, total }) {
+// Thunk that clears only one supplier's items from the cart
+import { clearSupplierCart } from "@/store/cartThunks";
+
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible";
+import { ChevronDown, ChevronUp } from "lucide-react";
+
+export default function CheckoutForm({ supplierId }) {
   const router = useRouter();
-  const { currentUser } = useAuth();
-  const { clearCart } = useCart(); // ← get clearCart
+  const dispatch = useDispatch();
 
-  // form state
-  const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    phone: "",
-    address: "",
-    suite: "",
-    city: "",
-    state: "",
-    zip: "",
-    isGift: false,
-  });
-  const [paymentMethod, setPaymentMethod] = useState("hyperpay");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  // pull user from Redux
+  const user = useSelector((state) => state.auth.user);
 
-  // cost calculations
-  const shippingCost = items.reduce((sum, i) => sum + (i.shippingCost || 0), 0);
-  const vat = (total + shippingCost) * 0.15;
-  const grandTotal = total + shippingCost + vat;
+  // 1️⃣ only this supplier’s items
+  const items = useSelector((state) =>
+    state.cart.items.filter((i) => i.supplierId === supplierId)
+  );
 
-  // guard: must be logged in + have items
+  // 2️⃣ compute totals
+  const total = useMemo(
+    () => items.reduce((sum, i) => sum + (i.subtotal || 0), 0),
+    [items]
+  );
+  const shippingCost = useMemo(
+    () => items.reduce((sum, i) => sum + (i.shippingCost || 0), 0),
+    [items]
+  );
+  const vat = Number(((total + shippingCost) * 0.15).toFixed(2));
+  const grandTotal = Number((total + shippingCost + vat).toFixed(2));
+
+  // 3️⃣ checkout-form state
+  const form = useSelector((state) => state.checkout.form);
+  const paymentMethod = useSelector((state) => state.checkout.paymentMethod);
+  const loading = useSelector((state) => state.checkout.loading);
+  const error = useSelector((state) => state.checkout.error);
+
+  // 5️⃣ redirect if no user or no items
   useEffect(() => {
-    if (!currentUser) {
+    if (!user) {
       toast.error("Please log in");
       router.push("/user-login");
-    } else if (items.length === 0) {
+      return;
+    }
+    if (items.length === 0) {
       router.push("/cart");
     }
-  }, [currentUser, items.length, router]);
+  }, [user, items.length, router]);
 
+  // 6️⃣ form field handler
   function handleChange(e) {
     const { name, value, type, checked } = e.target;
-    setForm((f) => ({
-      ...f,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    dispatch(
+      updateField({
+        name,
+        value: type === "checkbox" ? checked : value,
+      })
+    );
   }
 
-  async function createInvoice(path, payload) {
-    const res = await fetch(`${API_BASE}${path}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) throw new Error(`Error ${res.status}`);
-    return res.json();
-  }
+  // 7️⃣ onPay: create order, reset checkout, clear *this* supplier’s cart items
+  function onPay() {
+    const base = { supplierId, items, shippingCost, vat, amount: grandTotal };
 
-  async function onPay() {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const base = {
-        supplierId,
-        shippingCost,
-        vat,
-        amount: grandTotal,
-        items,
-        ...form,
-      };
-
-      if (paymentMethod === "sadad") {
-        // 1) create the invoice on your Express + GoPay
-        const invoice = await createInvoice("/api/create-invoice", {
-          ...base,
-          billNumber: Date.now().toString(),
+    if (paymentMethod === "sadad") {
+      dispatch(createSadadOrder({ base, form }))
+        .unwrap()
+        .then((billNumber) => {
+          dispatch(resetCheckout());
+          if (user.uid) {
+            dispatch(
+              clearSupplierCart({
+                userId: user.uid,
+                supplierId,
+              })
+            );
+          }
+          router.push(`/payment-details?orderId=${billNumber}`);
+        })
+        .catch((e) => {
+          toast.error(e.toString());
         });
-
-        // 2) save into Orders collection
-        await setDoc(doc(db, "orders", invoice.billNumber), {
-          orderId: invoice.billNumber,
-          method: "sadad",
-          items,
-          shippingCost,
-          vat,
-          total: grandTotal,
-          customer: {
-            uid: currentUser.uid,
-            name: `${form.firstName} ${form.lastName}`.trim(),
-            phone: form.phone,
-            address: {
-              address: form.address,
-              suite: form.suite,
-              city: form.city,
-              state: form.state,
-              zip: form.zip,
-            },
-          },
-          sadadNumber: invoice.billNumber,
-          createdAt: new Date().toISOString(),
-          status: "pending",
-        });
-
-        // 3) **clear the cart**
-        await clearCart();
-
-        // 4) navigate to your internal success page
-        return router.push(`/payment-details?orderId=${invoice.billNumber}`);
-      }
-
-      // …handle other payment methods similarly…
-
-      throw new Error("Please select a payment method");
-    } catch (e) {
-      console.error(e);
-      setError(e.message);
-      toast.error(e.message);
-    } finally {
-      setLoading(false);
+    } else {
+      toast.error("Please select a payment method");
     }
   }
 
   return (
     <div className='grid md:grid-cols-2 gap-8'>
-      {/* ─── LEFT COLUMN: Shipping & Method ───────────────────────── */}
+      {/* ─── LEFT COLUMN ───────────────────────────────────────── */}
       <div className='space-y-6'>
         <fieldset className='space-y-4 border p-4 rounded'>
           <legend className='font-medium'>Shipping address</legend>
-
           {/* First / Last */}
           <div className='grid grid-cols-2 gap-4'>
             <div>
-              <label className='block text-sm'>First name*</label>
+              <label htmlFor='firstName' className='block text-sm'>
+                First name*
+              </label>
               <Input
+                id='firstName'
                 name='firstName'
                 required
                 value={form.firstName}
@@ -151,8 +127,11 @@ export default function CheckoutForm({ supplierId, items, total }) {
               />
             </div>
             <div>
-              <label className='block text-sm'>Last name*</label>
+              <label htmlFor='lastName' className='block text-sm'>
+                Last name*
+              </label>
               <Input
+                id='lastName'
                 name='lastName'
                 required
                 value={form.lastName}
@@ -160,11 +139,13 @@ export default function CheckoutForm({ supplierId, items, total }) {
               />
             </div>
           </div>
-
           {/* Phone */}
           <div>
-            <label className='block text-sm'>Phone*</label>
+            <label htmlFor='phone' className='block text-sm'>
+              Phone*
+            </label>
             <Input
+              id='phone'
               name='phone'
               type='tel'
               required
@@ -172,29 +153,39 @@ export default function CheckoutForm({ supplierId, items, total }) {
               onChange={handleChange}
             />
           </div>
-
           {/* Address */}
           <div>
-            <label className='block text-sm'>Address*</label>
+            <label htmlFor='address' className='block text-sm'>
+              Address*
+            </label>
             <Input
+              id='address'
               name='address'
               required
               value={form.address}
               onChange={handleChange}
             />
           </div>
-
-          {/* Suite */}
+          {/* Apt/Suite */}
           <div>
-            <label className='block text-sm'>Apt, suite, etc. (optional)</label>
-            <Input name='suite' value={form.suite} onChange={handleChange} />
+            <label htmlFor='suite' className='block text-sm'>
+              Apt / Suite (opt.)
+            </label>
+            <Input
+              id='suite'
+              name='suite'
+              value={form.suite}
+              onChange={handleChange}
+            />
           </div>
-
           {/* City / State / ZIP */}
           <div className='grid grid-cols-3 gap-4'>
             <div>
-              <label className='block text-sm'>City*</label>
+              <label htmlFor='city' className='block text-sm'>
+                City*
+              </label>
               <Input
+                id='city'
                 name='city'
                 required
                 value={form.city}
@@ -202,8 +193,11 @@ export default function CheckoutForm({ supplierId, items, total }) {
               />
             </div>
             <div>
-              <label className='block text-sm'>State*</label>
+              <label htmlFor='state' className='block text-sm'>
+                State*
+              </label>
               <select
+                id='state'
                 name='state'
                 required
                 value={form.state}
@@ -216,8 +210,11 @@ export default function CheckoutForm({ supplierId, items, total }) {
               </select>
             </div>
             <div>
-              <label className='block text-sm'>ZIP*</label>
+              <label htmlFor='zip' className='block text-sm'>
+                ZIP*
+              </label>
               <Input
+                id='zip'
                 name='zip'
                 required
                 value={form.zip}
@@ -225,96 +222,167 @@ export default function CheckoutForm({ supplierId, items, total }) {
               />
             </div>
           </div>
-
           {/* Gift */}
           <div className='flex items-center gap-2'>
             <input
-              id='gift'
+              id='isGift'
               name='isGift'
               type='checkbox'
               checked={form.isGift}
               onChange={handleChange}
             />
-            <label htmlFor='gift' className='text-sm'>
+            <label htmlFor='isGift' className='text-sm'>
               This order is a gift
             </label>
           </div>
         </fieldset>
 
-        {/* PAYMENT METHOD */}
-        <div className='space-y-4'>
-          {/* HyperPay */}
+        {/* Payment Methods */}
+        <div className='space-y-2'>
+          {/* Hyperpay */}
           <label
-            className={`flex items-center border rounded p-4 cursor-pointer ${
+            htmlFor='pay-hyperpay'
+            className={`flex items-center p-3 bg-white rounded-lg border transition ${
               paymentMethod === "hyperpay"
-                ? "border-blue-600"
-                : "border-gray-300"
-            }`}
+                ? "border-blue-600 shadow-sm"
+                : "border-gray-200 hover:shadow-sm hover:border-gray-300"
+            } cursor-pointer`}
+            onClick={() => dispatch(setPaymentMethod("hyperpay"))}
           >
             <input
               type='radio'
+              id='pay-hyperpay'
               name='payment'
               value='hyperpay'
               checked={paymentMethod === "hyperpay"}
-              onChange={() => setPaymentMethod("hyperpay")}
-              className='mr-4'
+              onChange={() => dispatch(setPaymentMethod("hyperpay"))}
+              className='sr-only'
             />
             <div className='flex-1'>
-              <div className='font-medium'>Debit/Credit Card</div>
-              <div className='text-xs text-gray-500'>
-                Fast, secure card processing
-              </div>
+              <p className='text-base font-semibold'>Debit / Credit</p>
             </div>
+            <img src='/visa.png' alt='Visa' className='h-8 w-auto ml-2' />
+            <img
+              src='/master.png'
+              alt='Mastercard'
+              className='h-6 w-auto ml-2'
+            />
+            <img src='/mada.png' alt='Mada' className='h-8 w-auto ml-2' />
           </label>
 
-          {/* GoPay / SADAD */}
+          {/* Sadad */}
           <label
-            className={`flex items-center border rounded p-4 cursor-pointer ${
-              paymentMethod === "sadad" ? "border-blue-600" : "border-gray-300"
-            }`}
+            htmlFor='pay-sadad'
+            className={`flex items-center p-3 bg-white rounded-lg border transition ${
+              paymentMethod === "sadad"
+                ? "border-blue-600 shadow-sm"
+                : "border-gray-200 hover:shadow-sm hover:border-gray-300"
+            } cursor-pointer`}
+            onClick={() => dispatch(setPaymentMethod("sadad"))}
           >
             <input
               type='radio'
+              id='pay-sadad'
               name='payment'
               value='sadad'
               checked={paymentMethod === "sadad"}
-              onChange={() => setPaymentMethod("sadad")}
-              className='mr-4'
+              onChange={() => dispatch(setPaymentMethod("sadad"))}
+              className='sr-only'
             />
             <div className='flex-1'>
-              <div className='font-medium'>SADAD</div>
+              <p className='text-base font-semibold'>Sadad</p>
             </div>
-            <img src='/sadad.png' alt='SADAD' className='h-6' />
+            <img src='/sadad.png' alt='Sadad' className='h-8 w-auto ml-2' />
           </label>
 
-          {/* GoPay Wallet */}
-          <label
-            className={`flex items-center border rounded p-4 cursor-pointer ${
-              paymentMethod === "gpay" ? "border-blue-600" : "border-gray-300"
-            }`}
+          {/* Wallet */}
+          <Collapsible
+            open={paymentMethod.startsWith("wallet")}
+            onOpenChange={(open) =>
+              open && dispatch(setPaymentMethod("wallet"))
+            }
           >
-            <input
-              type='radio'
-              name='payment'
-              value='gpay'
-              checked={paymentMethod === "gpay"}
-              onChange={() => setPaymentMethod("gpay")}
-              className='mr-4'
-            />
-            <div className='flex-1'>
-              <div className='font-medium'>GoPay Wallet</div>
+            <div
+              className={`border rounded-lg transition ${
+                paymentMethod.startsWith("wallet")
+                  ? "border-blue-600 shadow-sm"
+                  : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+              }`}
+            >
+              <CollapsibleTrigger asChild>
+                <div
+                  className='flex items-center justify-between p-3 bg-white rounded-lg cursor-pointer border-gray-200 hover:border-gray-300 hover:shadow-sm transition'
+                  onClick={() => dispatch(setPaymentMethod("wallet"))}
+                >
+                  <span className='text-base font-semibold'>
+                    Digital Wallet
+                  </span>
+                  <div className='flex items-center gap-2'>
+                    <img
+                      src='/applepay.png'
+                      alt='Apple Pay'
+                      className='h-8 w-auto'
+                    />
+                    <img
+                      src='/googlepay.jpeg'
+                      alt='Google Pay'
+                      className='h-5 w-auto'
+                    />
+                    {paymentMethod.startsWith("wallet") ? (
+                      <ChevronUp className='h-4 w-4 text-gray-600' />
+                    ) : (
+                      <ChevronDown className='h-4 w-4 text-gray-600' />
+                    )}
+                  </div>
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className='border-t border-gray-200'>
+                  {[
+                    {
+                      key: "applepay",
+                      label: "Apple Pay",
+                      icon: "/applepay.png",
+                    },
+                    {
+                      key: "googlepay",
+                      label: "Google Pay",
+                      icon: "/googlepay.jpeg",
+                    },
+                  ].map(({ key, label, icon }) => (
+                    <label
+                      key={key}
+                      className={`flex items-center p-2 cursor-pointer ${
+                        paymentMethod === key
+                          ? "bg-gray-50"
+                          : "hover:bg-gray-50"
+                      }`}
+                      onClick={() => dispatch(setPaymentMethod(key))}
+                    >
+                      <input
+                        type='radio'
+                        name='payment'
+                        value={key}
+                        checked={paymentMethod === key}
+                        onChange={() => dispatch(setPaymentMethod(key))}
+                        className='sr-only'
+                      />
+                      <img src={icon} alt={label} className='h-5 w-auto mr-2' />
+                      <span className='text-sm font-medium'>{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </CollapsibleContent>
             </div>
-            <img src='/gopay-logo.png' alt='GoPay' className='h-6' />
-          </label>
+          </Collapsible>
 
-          {error && <p className='text-red-600'>{error}</p>}
+          {error && <p className='text-red-600 text-sm mt-1'>{error}</p>}
         </div>
       </div>
 
-      {/* RIGHT COLUMN: Order Summary & Continue Button */}
+      {/* ─── RIGHT COLUMN ──────────────────────────────────────── */}
       <div className='border p-6 rounded bg-gray-50 space-y-4'>
         <h2 className='text-xl font-semibold text-center'>Order summary</h2>
-
         {items.map((i) => (
           <div key={i.id} className='flex justify-between text-sm'>
             <span>
@@ -323,7 +391,6 @@ export default function CheckoutForm({ supplierId, items, total }) {
             <Currency amount={i.subtotal} />
           </div>
         ))}
-
         <div className='border-t pt-4 space-y-2 text-sm'>
           <div className='flex justify-between'>
             <span>Subtotal</span>
@@ -338,12 +405,9 @@ export default function CheckoutForm({ supplierId, items, total }) {
             <Currency amount={vat} />
           </div>
         </div>
-
         <div className='border-t pt-4 flex justify-between font-semibold text-lg'>
-          <span>Total</span>
-          <Currency amount={grandTotal} />
+          <span>Total</span> <Currency amount={grandTotal} />
         </div>
-
         <Button onClick={onPay} disabled={loading} className='w-full mt-4'>
           {loading ? "Processing…" : "Continue to Payment"}
         </Button>

@@ -1,7 +1,8 @@
 "use client";
 
+import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState, useMemo } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import { getProductById } from "@/lib/getProductById";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
@@ -17,20 +18,24 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { getLocalizedField } from "@/lib/getLocalizedField";
-import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { getAuth } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/firebase/config";
 import Link from "next/link";
 
+import { addOrUpdateCartItem } from "@/store/cartSlice";
+
 export default function ProductDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
+  const dispatch = useDispatch();
   const { t, i18n } = useTranslation();
-  const { addToCart } = useCart();
 
-  // ─── State & Memos ──────────────────────────────────────────────────────
+  // ← Pull the user from Redux now
+  const currentUser = useSelector((state) => state.auth.user);
+
+  // ─── State & Memos ────────────────────────────────────────────────
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -91,11 +96,8 @@ export default function ProductDetailsPage() {
     matchedPrice !== null && !isUnlimitedTier && !isNaN(quantity)
       ? matchedPrice * quantity
       : null;
-  const isSubtotalInvalid = subtotal === null || isNaN(subtotal);
 
-  // ─── Effects ────────────────────────────────────────────────────────────
-
-  // 1️⃣ Fetch the product once
+  // ─── Effects ─────────────────────────────────────────────────────────
   useEffect(() => {
     const load = async () => {
       const data = await getProductById(id);
@@ -108,20 +110,17 @@ export default function ProductDetailsPage() {
     if (id) load();
   }, [id]);
 
-  // 2️⃣ Prefetch detail route for snappier nav
   useEffect(() => {
     if (product?.id) {
       router.prefetch(`/product/${product.id}`);
     }
   }, [product, router]);
 
-  // ─── Early returns (after all hooks) ────────────────────────────────────
   if (loading) {
     return (
       <div className='max-w-6xl mx-auto px-4 py-10'>
-        {/* skeleton placeholders */}
         <Skeleton className='h-[400px] w-full rounded-xl' />
-        {/* …etc… */}
+        {/* …other skeletons */}
       </div>
     );
   }
@@ -134,7 +133,7 @@ export default function ProductDetailsPage() {
     );
   }
 
-  // ─── Render & Handlers ──────────────────────────────────────────────────
+  // Localized fields
   const productName = getLocalizedField(
     product.productName,
     i18n.language,
@@ -147,7 +146,8 @@ export default function ProductDetailsPage() {
   );
   const category = product.category || t("uncategorized");
 
-  const handleAddToCart = async () => {
+  // ─── Handlers ────────────────────────────────────────────────────────
+  const handleAddToCart = () => {
     if (quantity < 1) return toast.error(t("product_card.alert_quantity"));
     if (product.sizes?.length && !selectedSize)
       return toast.error(t("product_card.alert_size"));
@@ -156,30 +156,35 @@ export default function ProductDetailsPage() {
     if (!deliveryLocation) return toast.error(t("product_card.alert_location"));
     if (!hasValidNumericPrice)
       return toast.warning(t("product_card.contact_for_price"));
+    if (!currentUser) return toast.error(t("login_first"));
 
-    try {
-      await addToCart({
-        productId: id,
-        productName,
-        productImage: product.mainImageUrl,
-        quantity,
-        size: selectedSize,
-        color: selectedColor,
-        deliveryLocation,
-        price: matchedPrice,
-        shippingCost,
-        subtotal,
-        supplierId: product.supplierId,
-        supplierName: product.supplierName,
-        currency: product.currency || "SAR",
-      });
-      toast.success(t("product_card.added_to_cart"));
-    } catch {
-      toast.error(t("product_card.cart_error"));
-    }
+    dispatch(
+      addOrUpdateCartItem({
+        userId: currentUser.uid,
+        item: {
+          productId: id,
+          productName,
+          productImage: product.mainImageUrl,
+          quantity,
+          size: selectedSize,
+          color: selectedColor,
+          deliveryLocation,
+          price: matchedPrice,
+          shippingCost,
+          subtotal,
+          supplierId: product.supplierId,
+          supplierName: product.supplierName,
+          currency: product.currency || "SAR",
+        },
+      })
+    )
+      .unwrap()
+      .then(() => toast.success(t("product_card.added_to_cart")))
+      .catch(() => toast.error(t("product_card.cart_error")));
   };
 
   const handleContactSupplier = async () => {
+    // you can still use Firebase Auth directly here if needed
     const auth = getAuth();
     const user = auth.currentUser;
     if (!user) {
@@ -189,30 +194,26 @@ export default function ProductDetailsPage() {
       return toast.error(t("no_supplier"));
     }
 
-    // Use `id` (the URL param), not product.id
     const chatId = `${user.uid}_${product.supplierId}_${id}`;
     const chatRef = doc(db, "productDetailsChats", chatId);
     const miniRef = doc(db, "miniProductsDetails", chatId);
 
     try {
-      // 1) Upsert the chat metadata
       const snap = await getDoc(chatRef);
       if (!snap.exists()) {
         await setDoc(chatRef, {
           buyerId: user.uid,
           supplierId: product.supplierId,
-          productId: id, // ← use `id` here
+          productId: id,
           participants: [user.uid, product.supplierId],
           createdAt: serverTimestamp(),
           lastUpdated: serverTimestamp(),
         });
       }
-
-      // 2) Snapshot the mini-product details
       await setDoc(
         miniRef,
         {
-          productId: id, // ← and here
+          productId: id,
           name: productName,
           mainImageUrl: product.mainImageUrl,
           category: product.category,
@@ -223,8 +224,6 @@ export default function ProductDetailsPage() {
         { merge: true }
       );
 
-      // 3) Navigate to the chat
-      // correct:
       router.push(
         `/chat/product-details/${chatId}?productId=${id}&supplierId=${product.supplierId}`
       );
@@ -234,6 +233,7 @@ export default function ProductDetailsPage() {
     }
   };
 
+  // ─── Render ────────────────────────────────────────────────────────────
   return (
     <div className='max-w-6xl mx-auto px-4 py-10'>
       <div className='flex flex-col md:flex-row gap-8'>
@@ -490,13 +490,8 @@ export default function ProductDetailsPage() {
           <div className='flex flex-wrap items-center gap-4 mt-4'>
             {hasValidNumericPrice && (
               <Button
-                className='bg-[#2c6449] hover:bg-[#1b4533] text-white'
                 onClick={handleAddToCart}
-                disabled={
-                  quantity < minQtyAllowed ||
-                  isUnlimitedTier ||
-                  isSubtotalInvalid
-                }
+                disabled={quantity < minQtyAllowed}
               >
                 {t("product_card.add_to_cart")}
               </Button>

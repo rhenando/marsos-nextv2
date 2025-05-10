@@ -1,11 +1,10 @@
-// components/RfqModal.jsx
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import CreatableSelect from "react-select/creatable";
 import Select from "react-select";
 import { db, storage } from "@/firebase/config";
-import { useAuth } from "@/context/AuthContext";
+import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import {
   collection,
@@ -21,7 +20,10 @@ import countryList from "react-select-country-list";
 import { toast } from "sonner";
 
 const RfqModal = ({ show, onClose }) => {
-  const { currentUser } = useAuth();
+  // ← grab the current user (and optionally their stored role) from Redux
+  const currentUser = useSelector((state) => state.auth.user);
+  const storedRole = useSelector((state) => state.auth.userData?.role);
+
   const { t } = useTranslation();
   const router = useRouter();
 
@@ -51,34 +53,32 @@ const RfqModal = ({ show, onClose }) => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, "products"));
-        const categoryMap = {};
-        const categoryList = [];
+        const snapshot = await getDocs(collection(db, "products"));
+        const catMap = {};
+        const catList = [];
 
-        querySnapshot.forEach((docSnap) => {
+        snapshot.forEach((docSnap) => {
           const data = docSnap.data();
           if (data.category && data.supplierName && data.supplierId) {
-            if (!categoryList.find((c) => c.value === data.category)) {
-              categoryList.push({ value: data.category, label: data.category });
+            if (!catList.find((c) => c.value === data.category)) {
+              catList.push({ value: data.category, label: data.category });
             }
-            if (!categoryMap[data.category]) {
-              categoryMap[data.category] = new Map();
-            }
-            categoryMap[data.category].set(data.supplierId, {
-              supplierName: data.supplierName,
+            catMap[data.category] ??= new Map();
+            catMap[data.category].set(data.supplierId, {
               supplierId: data.supplierId,
+              supplierName: data.supplierName,
             });
           }
         });
 
         const cleaned = {};
-        Object.keys(categoryMap).forEach((cat) => {
-          cleaned[cat] = Array.from(categoryMap[cat].values());
-        });
+        for (const cat of Object.keys(catMap)) {
+          cleaned[cat] = Array.from(catMap[cat].values());
+        }
 
-        setCategories(categoryList);
+        setCategories(catList);
         setCategorySuppliers(cleaned);
-      } catch (error) {
+      } catch {
         toast.error(t("rfq.fetch_categories_error"));
       }
     };
@@ -87,32 +87,27 @@ const RfqModal = ({ show, onClose }) => {
   }, [t]);
 
   const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (!selectedFile) return;
+    const f = e.target.files?.[0];
+    if (!f) return;
 
     setUploading(true);
-    setFile(selectedFile);
+    setFile(f);
 
-    const storageRef = ref(
-      storage,
-      `rfq_files/${currentUser.uid}/${selectedFile.name}`
-    );
-    const uploadTask = uploadBytesResumable(storageRef, selectedFile);
+    const storageRef = ref(storage, `rfq_files/${currentUser.uid}/${f.name}`);
+    const uploadTask = uploadBytesResumable(storageRef, f);
 
     uploadTask.on(
       "state_changed",
-      (snapshot) => {
-        const progress =
-          (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        setUploadProgress(progress);
+      (snap) => {
+        setUploadProgress((snap.bytesTransferred / snap.totalBytes) * 100);
       },
       () => {
         toast.error(t("rfq.upload_failed"));
         setUploading(false);
       },
       async () => {
-        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-        setFileURL(downloadURL);
+        const url = await getDownloadURL(uploadTask.snapshot.ref);
+        setFileURL(url);
         toast.success(t("rfq.upload_success"));
         setUploading(false);
       }
@@ -120,86 +115,84 @@ const RfqModal = ({ show, onClose }) => {
   };
 
   const validateForm = () => {
-    const newErrors = {};
-    if (!selectedCategory) newErrors.selectedCategory = t("rfq.error_category");
+    const errs = {};
+    if (!selectedCategory) errs.selectedCategory = t("rfq.error_category");
     if (!selectedSubcategory)
-      newErrors.selectedSubcategory = t("rfq.error_subcategory");
-    if (!productDetails.trim())
-      newErrors.productDetails = t("rfq.error_details");
-    if (!file) newErrors.file = t("rfq.error_file");
-    if (file && !fileURL && !uploading)
-      newErrors.file = t("rfq.error_file_upload");
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+      errs.selectedSubcategory = t("rfq.error_subcategory");
+    if (!productDetails.trim()) errs.productDetails = t("rfq.error_details");
+    if (!file) errs.file = t("rfq.error_file");
+    if (file && !fileURL && !uploading) errs.file = t("rfq.error_file_upload");
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!currentUser) return toast.warning(t("rfq.must_login"));
-
     if (!validateForm() || uploading) return;
 
     try {
-      const userSnap = await getDoc(doc(db, "users", currentUser.uid));
-      if (!userSnap.exists()) return toast.error(t("rfq.user_not_found"));
-      const userRole = userSnap.data().role || "buyer";
+      // if you still need the Firestore role, fetch here:
+      const userSnap = storedRole
+        ? null
+        : await getDoc(doc(db, "users", currentUser.uid));
+      const role = storedRole || userSnap.data()?.role || "buyer";
 
       const suppliers = categorySuppliers[selectedCategory.value] || [];
-      if (suppliers.length === 0) return toast.error(t("rfq.no_suppliers"));
+      if (suppliers.length === 0) {
+        toast.error(t("rfq.no_suppliers"));
+        return;
+      }
 
-      const promises = suppliers.map(async (supplier) => {
-        const rfqRef = await addDoc(collection(db, "rfqs"), {
-          buyerId: currentUser.uid,
-          category: selectedCategory.value,
-          subcategory: selectedSubcategory.value,
-          productDetails,
-          fileURL,
-          size,
-          color,
-          shipping: shipping.label,
-          shareBusinessCard,
-          supplierId: supplier.supplierId,
-          supplierName: supplier.supplierName,
-          timestamp: new Date(),
-        });
-
-        const chatId = `chat_${currentUser.uid}_${supplier.supplierId}`;
-        const chatRef = doc(db, "rfqChats", chatId);
-        const chatSnap = await getDoc(chatRef);
-        if (!chatSnap.exists()) {
-          await setDoc(chatRef, {
-            chatId,
+      await Promise.all(
+        suppliers.map(async (supplier) => {
+          const rfqRef = await addDoc(collection(db, "rfqs"), {
             buyerId: currentUser.uid,
+            category: selectedCategory.value,
+            subcategory: selectedSubcategory.value,
+            productDetails,
+            fileURL,
+            size,
+            color,
+            shipping: shipping.label,
+            shareBusinessCard,
             supplierId: supplier.supplierId,
             supplierName: supplier.supplierName,
-            messages: [],
-            createdAt: new Date(),
-            rfqId: rfqRef.id,
+            timestamp: new Date(),
           });
-        }
-      });
 
-      await Promise.all(promises);
+          const chatId = `chat_${currentUser.uid}_${supplier.supplierId}`;
+          const chatRef = doc(db, "rfqChats", chatId);
+          const chatSnap = await getDoc(chatRef);
+          if (!chatSnap.exists()) {
+            await setDoc(chatRef, {
+              chatId,
+              buyerId: currentUser.uid,
+              supplierId: supplier.supplierId,
+              supplierName: supplier.supplierName,
+              messages: [],
+              createdAt: new Date(),
+              rfqId: rfqRef.id,
+            });
+          }
+        })
+      );
+
       toast.success(t("rfq.sent_success"));
       setShowSuccessScreen(true);
 
       setTimeout(() => {
         onClose();
-        if (userSnap.data().role === "buyer") {
-          router.push("/buyer-dashboard/messages");
-        } else {
-          router.push("/supplier-dashboard/messages");
-        }
+        if (role === "buyer") router.push("/buyer-dashboard/messages");
+        else router.push("/supplier-dashboard/messages");
       }, 1500);
-    } catch (error) {
-      console.error(error);
+    } catch {
       toast.error(t("rfq.submit_failed"));
     }
   };
 
   if (!show) return null;
-
-  if (showSuccessScreen) {
+  if (showSuccessScreen)
     return (
       <div className='fixed inset-0 bg-[#2c6449]/30 flex items-center justify-center z-[9999]'>
         <div className='text-center'>
@@ -223,7 +216,6 @@ const RfqModal = ({ show, onClose }) => {
         </div>
       </div>
     );
-  }
 
   return (
     <div className='fixed inset-0 bg-[#2c6449]/30 z-[9999] flex justify-center overflow-y-auto pt-[90px] px-4 pb-10'>

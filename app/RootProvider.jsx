@@ -1,29 +1,72 @@
+// app/RootProvider.jsx
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useEffect } from "react";
+import dynamic from "next/dynamic";
+import { Provider, useDispatch, useSelector } from "react-redux";
+import { store } from "@/store/store";
 import "../i18n";
 
-import { AuthProvider, useAuth } from "../context/AuthContext";
-import { CartProvider } from "../context/CartContext";
-import { LoadingProvider } from "../context/LoadingContext";
-import { LocalizationProvider } from "../context/LocalizationContext";
+import { watchAuthState } from "@/store/authSlice";
+import { LoadingProvider } from "@/context/LoadingContext";
+import { LocalizationProvider } from "@/context/LocalizationContext";
 
 import GlobalLoading from "@/components/global/GlobalLoading";
-import Header from "@/components/header/Header";
-import StickySearchBar from "@/components/header/StickySearchBar";
-import Footer from "@/components/global/Footer";
+// load heavy UI only on client
+const Header = dynamic(() => import("@/components/header/Header"), {
+  ssr: false,
+});
+const StickySearchBar = dynamic(
+  () => import("@/components/header/StickySearchBar"),
+  { ssr: false }
+);
+const Footer = dynamic(() => import("@/components/global/Footer"), {
+  ssr: false,
+});
 import RfqModal from "@/components/rfq/Rfq";
 import { Toaster } from "@/components/ui/sonner";
 
 import Lenis from "@studio-freight/lenis";
 import { AnimatePresence, motion } from "framer-motion";
 
-function AppLayout({ children }) {
-  const { loading } = useAuth(); // ✅ Get loading state from AuthContext
-  const [showSticky, setShowSticky] = useState(false);
-  const [showRFQModal, setShowRFQModal] = useState(false);
+// 1️⃣ Start auth listener
+function AuthWatcher({ children }) {
+  const dispatch = useDispatch();
+  useEffect(() => {
+    dispatch(watchAuthState());
+  }, [dispatch]);
+  return children;
+}
 
-  // ✨ Gate rendering until auth is ready
+// 2️⃣ Layout reads loading from Redux
+function AppLayout({ children }) {
+  const loading = useSelector((state) => state.auth.loading);
+  const [showSticky, setShowSticky] = React.useState(false);
+  const [showRFQModal, setShowRFQModal] = React.useState(false);
+
+  // --- ALWAYS run your hooks, before any return
+  useEffect(() => {
+    const onScroll = () => setShowSticky(window.scrollY > 100);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smooth: true,
+      smoothTouch: false,
+    });
+    const raf = (time) => {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    };
+    requestAnimationFrame(raf);
+    return () => lenis.destroy();
+  }, []);
+
+  // --- only now bail out if still loading
   if (loading) {
     return (
       <div className='min-h-screen flex items-center justify-center'>
@@ -32,36 +75,9 @@ function AppLayout({ children }) {
     );
   }
 
-  // Scroll listener for sticky
-  useEffect(() => {
-    const handleScroll = () => {
-      setShowSticky(window.scrollY > 100);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  // Smooth scroll
-  useEffect(() => {
-    const lenis = new Lenis({
-      duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      smooth: true,
-      smoothTouch: false,
-    });
-
-    const raf = (time) => {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
-    };
-
-    requestAnimationFrame(raf);
-    return () => lenis.destroy();
-  }, []);
-
+  // --- normal UI once ready
   return (
     <>
-      {/* Header or StickySearchBar */}
       <AnimatePresence mode='wait'>
         {!showSticky ? (
           <motion.div
@@ -88,33 +104,29 @@ function AppLayout({ children }) {
         )}
       </AnimatePresence>
 
-      {/* Main content */}
       <div>{children}</div>
 
-      {/* Footer */}
       <Footer />
 
-      {/* RFQ Modal */}
       <RfqModal show={showRFQModal} onClose={() => setShowRFQModal(false)} />
 
-      {/* Toaster */}
       <Toaster richColors position='top-center' />
     </>
   );
 }
 
-// RootProvider wraps all app contexts
+// 3️⃣ Wrap entire app
 export default function RootProvider({ children }) {
   return (
-    <AuthProvider>
-      <CartProvider>
+    <Provider store={store}>
+      <AuthWatcher>
         <LoadingProvider>
           <LocalizationProvider>
             <GlobalLoading />
             <AppLayout>{children}</AppLayout>
           </LocalizationProvider>
         </LoadingProvider>
-      </CartProvider>
-    </AuthProvider>
+      </AuthWatcher>
+    </Provider>
   );
 }

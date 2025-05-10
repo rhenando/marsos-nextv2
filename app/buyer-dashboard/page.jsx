@@ -1,9 +1,10 @@
+// app/buyer-dashboard/page.jsx
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
+import useAuth from "@/hooks/useAuth";
 
-import { useAuth } from "@/context/AuthContext";
 import BuyerProfile from "@/components/buyer/BuyerProfile";
 import Orders from "@/components/buyer/orders/Orders";
 import UserMessages from "@/components/supplier-buyer/UserMessages";
@@ -19,10 +20,32 @@ import {
   Menu,
 } from "react-feather";
 
-const Dashboard = () => {
-  const { userData } = useAuth();
+export default function Dashboard() {
+  const { user, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedPage, setSelectedPage] = useState("home");
+
+  // Show loading state while auth is being checked
+  if (loading) {
+    return (
+      <div className='min-h-screen flex items-center justify-center'>
+        Loading your dashboard…
+      </div>
+    );
+  }
+
+  // Redirect or prompt if no user
+  if (!user) {
+    return (
+      <div className='min-h-screen flex items-center justify-center'>
+        You need to{" "}
+        <Link href='/user-login' className='underline text-primary'>
+          sign in
+        </Link>{" "}
+        first.
+      </div>
+    );
+  }
 
   const menuItems = [
     { key: "home", label: "Home", icon: <Home size={18} /> },
@@ -40,7 +63,7 @@ const Dashboard = () => {
         return (
           <div>
             <h2 className='text-2xl font-bold text-primary'>
-              Welcome, {userData?.name || "Buyer"}!
+              Welcome, {user.displayName || user.email}!
             </h2>
             <p className='text-gray-600 mt-2'>
               Manage your orders, wishlist, and profile all in one place.
@@ -99,7 +122,7 @@ const Dashboard = () => {
         </button>
         <h1 className='text-lg font-semibold text-primary'>Buyer Dashboard</h1>
         <img
-          src={userData?.logoUrl || "https://via.placeholder.com/32"}
+          src={user.logoUrl || "https://via.placeholder.com/32"}
           alt='User Avatar'
           className='w-10 h-10 rounded-full object-cover'
         />
@@ -140,6 +163,4 @@ const Dashboard = () => {
       </main>
     </div>
   );
-};
-
-export default Dashboard;
+}

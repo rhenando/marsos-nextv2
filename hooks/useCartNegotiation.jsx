@@ -1,22 +1,23 @@
 "use client";
 
-import { useAuth } from "@/context/AuthContext";
+import { useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { db } from "@/firebase/config";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 
 export function useCartNegotiation() {
-  const { currentUser } = useAuth();
+  // pull `user` (or however you named it) from your auth slice
+  const user = useSelector((state) => state.auth.user);
   const router = useRouter();
 
   const startNegotiation = async (supplierId, items) => {
-    if (!currentUser) {
+    if (!user) {
       toast.error("Please login to negotiate.");
       return;
     }
 
-    const chatId = `cart_${currentUser.uid}_${supplierId}`;
+    const chatId = `cart_${user.uid}_${supplierId}`;
     const chatRef = doc(db, "cartChats", chatId);
 
     try {
@@ -37,7 +38,7 @@ export function useCartNegotiation() {
 
       if (!existingChat.exists()) {
         await setDoc(chatRef, {
-          buyerId: currentUser.uid,
+          buyerId: user.uid,
           supplierId,
           createdAt: new Date(),
           status: "pending",

@@ -1,8 +1,8 @@
-// app/buyer-dashboard/orders/page.jsx
+// components/buyer/orders/Orders.jsx
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useAuth } from "@/context/AuthContext";
+import useAuth from "@/hooks/useAuth";
 import { db } from "@/firebase/config";
 import { collection, getDocs, onSnapshot } from "firebase/firestore";
 import { Card } from "@/components/ui/card";
@@ -19,7 +19,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 
 export default function BuyerOrdersPage() {
-  const { currentUser } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const notifiedBills = useRef(new Set());
@@ -27,9 +27,10 @@ export default function BuyerOrdersPage() {
 
   // 1️⃣ Load this buyer’s orders once
   useEffect(() => {
+    if (authLoading || !user?.uid) return;
+
     async function fetchOrders() {
-      if (!currentUser?.uid) return;
-      const uid = currentUser.uid;
+      const uid = user.uid;
       const snap = await getDocs(collection(db, "orders"));
       const filtered = [];
 
@@ -66,11 +67,16 @@ export default function BuyerOrdersPage() {
       setLoading(false);
     }
 
-    fetchOrders();
-  }, [currentUser]);
+    fetchOrders().catch((err) => {
+      console.error("Error fetching orders:", err);
+      setLoading(false);
+    });
+  }, [authLoading, user]);
 
   // 2️⃣ Listen for payment status changes, but skip the first batch
   useEffect(() => {
+    if (!user?.uid) return;
+
     const unsub = onSnapshot(collection(db, "payments"), (snap) => {
       snap.docChanges().forEach((change) => {
         const bill = change.doc.id;
@@ -85,7 +91,7 @@ export default function BuyerOrdersPage() {
           )
         );
 
-        // Only after the first snapshot, for APPROVED, and not already notified:
+        // After initial load, notify on APPROVED once per bill
         if (
           !isFirstSnapshot.current &&
           (change.type === "added" || change.type === "modified") &&
@@ -97,28 +103,37 @@ export default function BuyerOrdersPage() {
           notifiedBills.current.add(bill);
         }
       });
-
-      // Mark that initial snapshot is done
-      if (isFirstSnapshot.current) {
-        isFirstSnapshot.current = false;
-      }
+      isFirstSnapshot.current = false;
     });
 
     return () => unsub();
-  }, [orders]);
+  }, [user, orders]);
 
   const renderStatusClass = (s) =>
     s === "APPROVED" ? "text-green-600 font-medium" : "text-yellow-600";
+
+  // 3️⃣ Handle loading & no-auth
+  if (authLoading || loading) {
+    return (
+      <div className='flex justify-center py-12'>
+        <p className='text-sm text-muted-foreground'>Loading orders…</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className='text-center py-12'>
+        <p className='text-red-600'>Please sign in to view your orders.</p>
+      </div>
+    );
+  }
 
   return (
     <div className='max-w-6xl mx-auto p-6'>
       <h2 className='text-2xl font-semibold mb-6'>My Orders</h2>
 
-      {loading ? (
-        <p className='text-center text-sm text-muted-foreground'>
-          Loading orders…
-        </p>
-      ) : orders.length === 0 ? (
+      {orders.length === 0 ? (
         <p className='text-center text-sm text-muted-foreground'>
           No orders found.
         </p>
