@@ -9,7 +9,7 @@ import {
   getDownloadURL,
 } from "firebase/storage";
 import { db } from "@/firebase/config";
-import { useAuth } from "@/context/AuthContext";
+import { useSelector } from "react-redux";
 import { toast } from "sonner";
 
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 
 export default function ManageProfiles() {
-  const { currentUser } = useAuth();
+  const { user: currentUser, loading: authLoading } = useSelector(
+    (s) => s.auth
+  );
   const [formData, setFormData] = useState({
     nameEn: "",
     nameAr: "",
@@ -189,7 +191,15 @@ export default function ManageProfiles() {
     }
   };
 
-  if (loading) return <p className='text-center text-muted'>Loading…</p>;
+  // 1) while auth is initializing
+  if (authLoading) {
+    return <div>Loading…</div>;
+  }
+
+  // 2) once loaded, only admins (suppliers in this dashboard) get in
+  if (currentUser?.role !== "supplier") {
+    return <div>You are not authorized.</div>;
+  }
 
   return (
     <Card className='max-w-4xl mx-auto my-8 p-4'>

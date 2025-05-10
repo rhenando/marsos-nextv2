@@ -21,10 +21,11 @@ export const watchAuthState = createAsyncThunk(
         const userSnap = await getDoc(userDocRef);
         const profile = userSnap.exists() ? userSnap.data() : {};
 
-        // convert createdAt to a serializable number (ms since epoch)
+        // convert createdAt to a serializable number
         const createdAtRaw = profile.createdAt;
         const createdAt = createdAtRaw?.toMillis?.() ?? null;
 
+        // setUser will now also flip loading=false
         dispatch(
           setUser({
             uid: user.uid,
@@ -32,10 +33,11 @@ export const watchAuthState = createAsyncThunk(
             displayName:
               profile.displayName ?? profile.name ?? user.displayName ?? "",
             role: profile.role ?? "",
-            createdAt, // now a plain number
+            createdAt,
           })
         );
       } else {
+        // clearUser also flips loading=false
         dispatch(clearUser());
       }
     });
@@ -82,15 +84,19 @@ const slice = createSlice({
   name: "auth",
   initialState: {
     user: null,
-    loading: false,
+    loading: true,
     error: null,
   },
   reducers: {
     setUser(state, action) {
       state.user = action.payload;
+      state.loading = false; // ← stop loading as soon as we set a user
+      state.error = null;
     },
     clearUser(state) {
       state.user = null;
+      state.loading = false; // ← stop loading on sign-out
+      state.error = null;
     },
   },
   extraReducers: (builder) => {
@@ -115,10 +121,8 @@ const slice = createSlice({
       // watchAuthState
       .addCase(watchAuthState.pending, (s) => {
         s.loading = true;
-      })
-      .addCase(watchAuthState.fulfilled, (s) => {
-        s.loading = false;
       });
+    // note: no fulfilled handler needed—reducers handle loading=false
   },
 });
 

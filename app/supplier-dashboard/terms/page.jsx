@@ -3,14 +3,16 @@
 import { useEffect, useState } from "react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/firebase/config";
-import { useAuth } from "@/context/AuthContext";
+import { useSelector } from "react-redux";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
 
 const ManageTermsPage = () => {
-  const { userData } = useAuth();
+  const { user: currentUser, loading: authLoading } = useSelector(
+    (state) => state.auth
+  );
   const [terms, setTerms] = useState("");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState(null);
@@ -18,7 +20,7 @@ const ManageTermsPage = () => {
   useEffect(() => {
     const fetchTerms = async () => {
       try {
-        const docRef = doc(db, "terms_and_conditions", userData.uid);
+        const docRef = doc(db, "terms_and_conditions", currentUser.uid);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
@@ -34,18 +36,18 @@ const ManageTermsPage = () => {
       }
     };
 
-    if (userData?.uid) {
+    if (currentUser?.uid) {
       fetchTerms();
     }
-  }, [userData]);
+  }, [currentUser]);
 
   const handleSave = async () => {
     try {
-      const docRef = doc(db, "terms_and_conditions", userData.uid);
+      const docRef = doc(db, "terms_and_conditions", currentUser.uid);
       await setDoc(docRef, {
         content: terms,
-        supplierId: userData.uid,
-        supplierName: userData.name || "",
+        supplierId: currentUser.uid,
+        supplierName: currentUser.name || "",
       });
 
       setMessage("✅ Terms and Conditions saved successfully.");

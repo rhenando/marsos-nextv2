@@ -11,7 +11,7 @@ import {
   getDoc,
 } from "firebase/firestore";
 import Link from "next/link";
-import { useAuth } from "@/context/AuthContext";
+import { useSelector } from "react-redux";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +24,9 @@ import {
 } from "@/components/ui/table";
 
 const SupplierMessages = () => {
-  const { currentUser } = useAuth();
+  const { user: currentUser, loading: authLoading } = useSelector(
+    (state) => state.auth
+  );
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -119,6 +121,17 @@ const SupplierMessages = () => {
 
     fetchChats();
   }, [currentUser]);
+
+  if (authLoading) {
+    return (
+      <div className='flex items-center justify-center h-full'>
+        <Loader2 className='animate-spin' />
+      </div>
+    );
+  }
+  if (currentUser?.role !== "supplier") {
+    return <div>You are not authorized.</div>;
+  }
 
   return (
     <div className='w-full max-w-5xl mx-auto px-4 py-6'>

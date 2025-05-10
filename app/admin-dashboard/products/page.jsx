@@ -1,46 +1,65 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+// Firestore methods
 import { collection, getDocs, doc, deleteDoc } from "firebase/firestore";
+// Next.js navigation
 import { useRouter } from "next/navigation";
+// Your Firebase config
+import { db } from "@/firebase/config";
+// Pull directly from Redux instead of a custom hook
 import { useSelector } from "react-redux";
+// Excel export library
 import * as XLSX from "xlsx";
+// i18n translation
 import { useTranslation } from "react-i18next";
+// Toast notifications
 import { toast } from "sonner";
+// Icons
 import { Download, Trash2, Pencil } from "lucide-react";
 
-import { db } from "@/firebase/config";
-
+// Helper to show success toasts
 const showSuccess = (msg) => toast.success(msg);
+// Helper to show error toasts
 const showError = (msg) => toast.error(msg);
 
 export default function Products() {
   const router = useRouter();
   const { i18n, t } = useTranslation();
 
-  // 🎯 Redux auth state
+  // —————————————
+  // 1️⃣ Read auth state from Redux
+  // —————————————
   const { user, loading: authLoading } = useSelector((state) => state.auth);
-  const role = user?.role;
-  const hasRole = (r) => role === r;
+  const role = user?.role; // user.role or undefined
+  const hasRole = (r) => role === r; // helper to check any role
 
+  // —————————————
+  // 2️⃣ Local UI state
+  // —————————————
   const [productData, setProductData] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedTab, setSelectedTab] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
-
   const [filterType, setFilterType] = useState("manual");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // 1️⃣ Redirect non-admins once auth is known
+  // —————————————
+  // 3️⃣ Redirect non-admins once auth resolves
+  // —————————————
   useEffect(() => {
     if (!authLoading && !hasRole("admin")) {
+      // If finished loading and not an admin, send to login
       router.replace("/admin-login");
     }
   }, [authLoading, role, router]);
 
-  // 2️⃣ Load products for admins
+  // —————————————
+  // 4️⃣ Fetch products ONLY for admins
+  // —————————————
   useEffect(() => {
+    // don’t fetch while loading or if not admin
     if (authLoading || !hasRole("admin")) return;
 
     const fetchProducts = async () => {
@@ -49,11 +68,11 @@ export default function Products() {
         const prods = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setProductData(prods);
 
-        const cats = [
+        // derive unique categories for tabs
+        setCategories([
           "All",
           ...new Set(prods.map((p) => p.category || "Uncategorized")),
-        ];
-        setCategories(cats);
+        ]);
       } catch (err) {
         console.error(err);
         showError(t("admin_products.failed_to_load"));
@@ -63,22 +82,24 @@ export default function Products() {
     fetchProducts();
   }, [authLoading, role, t]);
 
-  // 3️⃣ Delete handler
+  // —————————————
+  // 5️⃣ Handlers: delete, search, reset
+  // —————————————
   const handleDelete = async (id) => {
     if (!confirm(t("admin_products.confirm_delete"))) return;
     try {
       await deleteDoc(doc(db, "products", id));
       setProductData((prev) => prev.filter((p) => p.id !== id));
       showSuccess(t("admin_products.deleted_success"));
-    } catch (err) {
-      console.error(err);
+    } catch {
       showError(t("admin_products.delete_failed"));
     }
   };
 
-  // 4️⃣ Search & sort
   const handleSearch = () => {
     let filtered = [...productData];
+
+    // text search across name, sku, supplier
     if (searchTerm) {
       filtered = filtered.filter((p) => {
         const name =
@@ -90,6 +111,8 @@ export default function Products() {
           .includes(searchTerm.toLowerCase());
       });
     }
+
+    // sort or filter by the chosen filterType
     if (filterType === "manual") {
       filtered = filtered.filter((p) => p.mainLocation);
     } else if (filterType === "price") {
@@ -97,6 +120,7 @@ export default function Products() {
     } else if (filterType === "quantity") {
       filtered.sort((a, b) => a.quantity - b.quantity);
     }
+
     setProductData(filtered);
   };
 
@@ -111,7 +135,9 @@ export default function Products() {
     }
   };
 
-  // 5️⃣ Tabs & Pagination
+  // —————————————
+  // 6️⃣ Tabs & Pagination logic
+  // —————————————
   const filteredProducts =
     selectedTab === "All"
       ? productData
@@ -127,7 +153,9 @@ export default function Products() {
     currentPage * itemsPerPage
   );
 
-  // 6️⃣ Excel export
+  // —————————————
+  // 7️⃣ Export to Excel
+  // —————————————
   const handleExportToExcel = () => {
     if (!productData.length) {
       showError(t("admin_products.no_data"));
@@ -152,13 +180,17 @@ export default function Products() {
     showSuccess(t("admin_products.export_success"));
   };
 
-  // 🔒 still loading auth or not admin? show nothing
-  if (authLoading || !hasRole("admin")) {
+  // —————————————
+  // 8️⃣ While auth is loading, show a loader
+  // —————————————
+  if (authLoading) {
     return <p className='text-center py-6'>{t("admin_products.loading")}</p>;
   }
 
+  // by this point we know isAdmin, so render the table
   return (
     <div className='p-4 max-w-screen-xl mx-auto'>
+      {/* Header */}
       <h2 className='text-xl font-bold text-green-600 mb-2'>
         {t("admin_products.title")}
       </h2>
@@ -180,7 +212,6 @@ export default function Products() {
           <option value='price'>{t("admin_products.price")}</option>
           <option value='quantity'>{t("admin_products.quantity")}</option>
         </select>
-
         <input
           type='text'
           placeholder={t("admin_products.search_placeholder")}
@@ -188,7 +219,6 @@ export default function Products() {
           onChange={(e) => setSearchTerm(e.target.value)}
           className='border px-2 py-1 rounded w-full sm:w-64'
         />
-
         <button
           onClick={handleSearch}
           className='bg-blue-600 text-white px-3 py-1 rounded'
@@ -220,7 +250,7 @@ export default function Products() {
         </button>
       </div>
 
-      {/* Categories Tabs */}
+      {/* Category Tabs */}
       <div className='flex flex-wrap gap-2 mb-4'>
         {categories.map((cat) => (
           <button
@@ -244,7 +274,7 @@ export default function Products() {
         ))}
       </div>
 
-      {/* Table */}
+      {/* Products Table */}
       <div className='overflow-x-auto'>
         <table className='min-w-full text-sm text-left'>
           <thead className='bg-gray-100 text-gray-600'>
@@ -299,7 +329,7 @@ export default function Products() {
         </table>
       </div>
 
-      {/* Pagination */}
+      {/* Pagination Controls */}
       <div className='flex justify-between mt-4 text-sm'>
         <button
           onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}

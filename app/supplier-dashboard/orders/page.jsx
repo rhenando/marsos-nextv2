@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuth } from "../../../context/AuthContext";
+import { useSelector } from "react-redux";
 import { db } from "../../../firebase/config";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -19,7 +19,9 @@ import {
 } from "@/components/ui/table";
 
 export default function SupplierOrdersPage() {
-  const { currentUser } = useAuth();
+  const { user: currentUser, loading: authLoading } = useSelector(
+    (state) => state.auth
+  );
   const router = useRouter();
 
   const [orders, setOrders] = useState([]);

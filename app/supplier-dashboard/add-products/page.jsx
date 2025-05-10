@@ -17,14 +17,16 @@ import {
   defaultColorOptions,
   defaultQuantityOptions,
 } from "@/lib/productOptions";
-import { useAuth } from "@/context/AuthContext";
+import { useSelector } from "react-redux";
 import useProductValidation from "@/hooks/useProductValidation";
 import { useRouter } from "next/navigation";
 
 import { generateSlug, ensureUniqueSlug } from "@/utils/slugify";
 
 export default function UploadProductForm() {
-  const { currentUser } = useAuth();
+  const { user: currentUser, loading: authLoading } = useSelector(
+    (state) => state.auth
+  );
 
   const router = useRouter();
 

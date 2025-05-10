@@ -28,13 +28,15 @@ import {
 } from "@/lib/productOptions";
 import useProductValidation from "@/hooks/useProductValidation";
 import { generateSlug, ensureUniqueSlug } from "@/utils/slugify";
-import { useAuth } from "@/context/AuthContext";
+import { useSelector } from "react-redux";
 
 export default function ProductFormPage() {
   const { id } = useParams();
   const isEditing = Boolean(id);
   const router = useRouter();
-  const { currentUser } = useAuth();
+  const { user: currentUser, loading: authLoading } = useSelector(
+    (state) => state.auth
+  );
   const { validateProduct } = useProductValidation();
 
   // Loading & submit state
@@ -353,13 +355,15 @@ export default function ProductFormPage() {
     }
   };
 
-  if (loading) {
+  if (authLoading) {
     return (
       <div className='p-4 text-center'>
         <Loader2 className='mx-auto animate-spin' /> Loading…
       </div>
     );
   }
+
+  if (currentUser?.role !== "admin") return <div>You are not authorized.</div>;
 
   return (
     <form onSubmit={handleSubmit} className='max-w-3xl mx-auto p-4 space-y-6'>

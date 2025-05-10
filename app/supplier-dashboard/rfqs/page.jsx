@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { db } from "@/firebase/config";
 import { getAuth } from "firebase/auth";
-import { useAuth } from "@/context/AuthContext";
+import { db } from "@/firebase/config";
 import { collection, query, where, getDocs } from "firebase/firestore";
+import { useSelector } from "react-redux";
 
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,20 +12,18 @@ import { Badge } from "@/components/ui/badge";
 
 const SupplierRFQs = () => {
   const auth = getAuth();
-  const { userData } = useAuth();
+  const { user: userData, loading: authLoading } = useSelector(
+    (state) => state.auth
+  );
   const [rfqs, setRfqs] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // wait for auth state
+    if (authLoading) return;
+
     const currentUser = auth.currentUser;
-
-    if (!currentUser) {
-      console.warn("No authenticated user.");
-      setLoading(false);
-      return;
-    }
-
-    const supplierId = userData?.supplierId || currentUser.uid;
+    const supplierId = userData?.uid || currentUser?.uid;
 
     if (!supplierId) {
       console.warn("No supplier ID found.");
@@ -39,14 +37,8 @@ const SupplierRFQs = () => {
           collection(db, "rfqs"),
           where("supplierId", "==", supplierId)
         );
-        const querySnapshot = await getDocs(q);
-
-        const rfqList = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-
-        setRfqs(rfqList);
+        const snapshot = await getDocs(q);
+        setRfqs(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
       } catch (err) {
         console.error("Error fetching RFQs:", err);
       } finally {
@@ -55,7 +47,7 @@ const SupplierRFQs = () => {
     };
 
     fetchRFQs();
-  }, [auth.currentUser, userData]);
+  }, [authLoading, auth.currentUser, userData]);
 
   return (
     <div className='w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6'>

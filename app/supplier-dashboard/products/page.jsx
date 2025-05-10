@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { db } from "@/firebase/config";
-import { useAuth } from "@/context/AuthContext";
+import { useSelector } from "react-redux";
 import {
   collection,
   query,
@@ -37,7 +37,10 @@ import { Plus, Trash2, Pencil } from "lucide-react";
 export default function ProductsPage() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language || "en";
-  const { userData, role, loading } = useAuth();
+  const { user: currentUser, loading: authLoading } = useSelector(
+    (state) => state.auth
+  );
+  const role = currentUser?.role;
   const [products, setProducts] = useState([]);
   const [selectedTab, setSelectedTab] = useState("All");
   const [categories, setCategories] = useState([]);
@@ -46,25 +49,25 @@ export default function ProductsPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      const supplierId = userData?.uid || userData?.supplierId;
-      if (!supplierId || role !== "supplier") return;
+    if (authLoading || role !== "supplier") return;
 
+    const fetchProducts = async () => {
+      const supplierId = currentUser.uid;
       const q = query(
         collection(db, "products"),
         where("supplierId", "==", supplierId)
       );
       const snapshot = await getDocs(q);
-      const list = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
       setProducts(list);
-      const cats = [
+      setCategories([
         "All",
         ...new Set(list.map((p) => p.category || "Uncategorized")),
-      ];
-      setCategories(cats);
+      ]);
     };
-    if (!loading && userData && role === "supplier") fetchProducts();
-  }, [loading, userData, role]);
+
+    fetchProducts();
+  }, [authLoading, currentUser, role]);
 
   const handleDelete = async (id) => {
     if (!confirm(t("products.confirmDelete"))) return;
@@ -82,8 +85,12 @@ export default function ProductsPage() {
     currentPage * itemsPerPage
   );
 
-  if (loading || !userData) return <p>{t("products.loading")}</p>;
-  if (role !== "supplier") return <p>{t("products.notAuthorized")}</p>;
+  if (authLoading) {
+    return <p>{t("products.loading")}</p>;
+  }
+  if (role !== "supplier") {
+    return <p>{t("products.notAuthorized")}</p>;
+  }
 
   return (
     <div className='p-4'>

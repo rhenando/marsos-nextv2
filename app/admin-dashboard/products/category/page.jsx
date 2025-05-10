@@ -11,13 +11,14 @@ import {
 } from "firebase/firestore";
 import { db } from "@/firebase/config";
 import { useTranslation } from "react-i18next";
-import { useAuth } from "@/context/AuthContext";
+import { useSelector } from "react-redux";
 import { toast } from "sonner";
 import { Trash2, Pencil, Plus } from "lucide-react";
 
 const ProductCategoriesPage = () => {
   const { t, i18n } = useTranslation();
-  const { userData } = useAuth();
+  // Read auth state from Redux
+  const { user, loading: authLoading } = useSelector((state) => state.auth);
 
   const [categories, setCategories] = useState([]);
   const [newCategoryEn, setNewCategoryEn] = useState("");
@@ -116,6 +117,16 @@ const ProductCategoriesPage = () => {
       )
     );
   };
+
+  // 1) While auth is initializing, show loader
+  if (authLoading) {
+    return <div>Loading…</div>;
+  }
+
+  // 2) Once loaded, block non-admins
+  if (user?.role !== "admin") {
+    return <div>You are not authorized.</div>;
+  }
 
   return (
     <div className='max-w-3xl mx-auto p-4'>
