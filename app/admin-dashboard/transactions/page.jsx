@@ -9,7 +9,6 @@ import { db } from "@/firebase/config";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import sarSymbol from "@/sar_symbol.svg";
 
 const PAGE_SIZE = 10;
 
@@ -218,7 +217,11 @@ export default function AdminTransactions() {
                   <td className='p-2'>{order.id}</td>
                   <td className='p-2'>{order.userEmail ?? "N/A"}</td>
                   <td className='p-2 flex items-center gap-1'>
-                    <img src={sarSymbol.src} alt='SAR' className='w-4 h-4' />
+                    <img
+                      src='/assets/sar_symbol.svg'
+                      alt='SAR'
+                      className='w-4 h-4'
+                    />
                     {Number(order.totalAmount ?? 0).toFixed(2)}
                   </td>
                   <td
