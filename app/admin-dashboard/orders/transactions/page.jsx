@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { collection, onSnapshot } from "firebase/firestore";
+import { useSelector } from "react-redux";
 import { db } from "@/firebase/config";
-import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,159 +12,124 @@ import sarSymbol from "@/public/sar_symbol.svg";
 
 const PAGE_SIZE = 10;
 
-const AdminTransactions = () => {
-  const { userData } = useAuth();
+export default function AdminTransactions() {
   const router = useRouter();
 
+  // Pull auth state from Redux:
+  const { user, loading: authLoading } = useSelector((state) => state.auth);
+  const role = user?.role;
+
   const [transactions, setTransactions] = useState([]);
-  const [filteredTransactions, setFilteredTransactions] = useState([]);
-  const [paginatedTransactions, setPaginatedTransactions] = useState([]);
+  const [filtered, setFiltered] = useState([]);
+  const [pageData, setPageData] = useState([]);
   const [statusCounts, setStatusCounts] = useState({
     paid: 0,
     pending: 0,
     failed: 0,
   });
-  const [expandedOrderId, setExpandedOrderId] = useState(null);
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
   const [searchEmail, setSearchEmail] = useState("");
-  const [dateFilter, setDateFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [loading, setLoading] = useState(true);
+  const [loadingData, setLoadingData] = useState(true);
 
-  const prevTransactionCount = useRef(0);
+  const prevCount = useRef(0);
   const audioRef = useRef(null);
 
-  // 🔒 Redirect if not admin
+  // 🚪 Redirect non-admins
   useEffect(() => {
-    if (!userData || userData.role !== "admin") {
-      router.push("/admin-login");
+    if (!authLoading && (!user || role !== "admin")) {
+      router.replace("/admin-login");
     }
-  }, [userData, router]);
+  }, [authLoading, user, role, router]);
 
-  // 🔁 Fetch Orders (Live)
+  // 🔁 Live subscription
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "orders"), (snapshot) => {
-      const data = snapshot.docs
-        .map((doc) => ({ id: doc.id, ...doc.data() }))
+    if (authLoading || !user || role !== "admin") return;
+
+    const unsub = onSnapshot(collection(db, "orders"), (snap) => {
+      const docs = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
         .sort((a, b) => {
-          const aTime = a.createdAt?.toDate?.()?.getTime?.() || 0;
-          const bTime = b.createdAt?.toDate?.()?.getTime?.() || 0;
-          return bTime - aTime;
+          const at = a.createdAt?.toDate?.().getTime() ?? 0;
+          const bt = b.createdAt?.toDate?.().getTime() ?? 0;
+          return bt - at;
         });
 
-      if (data.length > prevTransactionCount.current) {
-        try {
-          audioRef.current?.play();
-        } catch {
-          toast("🔔 New order received!");
-        }
+      // play sound on new order
+      if (docs.length > prevCount.current) {
+        audioRef.current?.play().catch(() => toast("🔔 New order received!"));
       }
-      prevTransactionCount.current = data.length;
+      prevCount.current = docs.length;
 
+      // count statuses
       const counts = { paid: 0, pending: 0, failed: 0 };
-      data.forEach((order) => {
-        const status = order.orderStatus?.toLowerCase();
-        if (status === "paid") counts.paid++;
-        if (status === "pending") counts.pending++;
-        if (status === "failed") counts.failed++;
+      docs.forEach((o) => {
+        const s = o.orderStatus?.toLowerCase();
+        if (s in counts) counts[s]++;
       });
 
       setStatusCounts(counts);
-      setTransactions(data);
-      setFilteredTransactions(data);
-      setLoading(false);
+      setTransactions(docs);
+      setFiltered(docs);
+      setLoadingData(false);
     });
 
-    return () => unsubscribe();
-  }, []);
+    return () => unsub();
+  }, [authLoading, user, role]);
 
-  // 🔍 Filter logic
+  // 🔍 Filter by status/email
   useEffect(() => {
-    let filtered = [...transactions];
-
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(
-        (order) =>
-          order.orderStatus?.toLowerCase?.() === statusFilter.toLowerCase()
+    let out = [...transactions];
+    if (filterStatus !== "all") {
+      out = out.filter((o) => o.orderStatus?.toLowerCase() === filterStatus);
+    }
+    if (searchEmail) {
+      out = out.filter((o) =>
+        o.userEmail?.toLowerCase().includes(searchEmail.toLowerCase())
       );
     }
-
-    if (searchEmail.trim() !== "") {
-      filtered = filtered.filter((order) =>
-        order.userEmail?.toLowerCase?.().includes(searchEmail.toLowerCase())
-      );
-    }
-
-    if (dateFilter !== "all") {
-      const now = new Date();
-      filtered = filtered.filter((order) => {
-        const date = order.createdAt?.toDate?.();
-        if (!date) return false;
-
-        if (dateFilter === "7days") {
-          const daysAgo = new Date();
-          daysAgo.setDate(now.getDate() - 7);
-          return date >= daysAgo;
-        }
-
-        if (dateFilter === "thisMonth") {
-          return (
-            date.getMonth() === now.getMonth() &&
-            date.getFullYear() === now.getFullYear()
-          );
-        }
-
-        return true;
-      });
-    }
-
-    setFilteredTransactions(filtered);
+    setFiltered(out);
     setCurrentPage(1);
-  }, [statusFilter, searchEmail, dateFilter, transactions]);
+  }, [filterStatus, searchEmail, transactions]);
 
-  // Pagination logic
+  // 📄 Paginate
   useEffect(() => {
-    const startIndex = (currentPage - 1) * PAGE_SIZE;
-    const endIndex = startIndex + PAGE_SIZE;
-    setPaginatedTransactions(filteredTransactions.slice(startIndex, endIndex));
-  }, [filteredTransactions, currentPage]);
+    const start = (currentPage - 1) * PAGE_SIZE;
+    setPageData(filtered.slice(start, start + PAGE_SIZE));
+  }, [filtered, currentPage]);
 
-  const handleExportCSV = () => {
-    const headers = ["Order ID", "Email", "Amount", "Status", "Date"];
-    const rows = filteredTransactions.map((order) => [
-      order.id,
-      order.userEmail || "N/A",
-      Number(order.totalAmount || 0).toFixed(2),
-      order.orderStatus,
-      order.createdAt?.toDate?.().toLocaleString() || "N/A",
+  // 📥 CSV export
+  const exportCSV = () => {
+    const header = ["Order ID", "Email", "Amount", "Status", "Date"];
+    const rows = filtered.map((o) => [
+      o.id,
+      o.userEmail || "N/A",
+      Number(o.totalAmount || 0).toFixed(2),
+      o.orderStatus,
+      o.createdAt?.toDate?.().toLocaleString() || "N/A",
     ]);
-
-    const csvContent =
+    const csv =
       "data:text/csv;charset=utf-8," +
-      [headers, ...rows].map((e) => e.join(",")).join("\n");
-
-    const encodedUri = encodeURI(csvContent);
+      [header, ...rows].map((r) => r.join(",")).join("\n");
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "transactions.csv");
+    link.href = encodeURI(csv);
+    link.download = "transactions.csv";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const totalRevenue = filteredTransactions.reduce(
-    (acc, order) => acc + Number(order.totalAmount || 0),
+  const totalRevenue = filtered.reduce(
+    (sum, o) => sum + Number(o.totalAmount || 0),
     0
   );
 
-  if (loading) return <p className='text-center mt-10'>Loading...</p>;
+  if (loadingData) {
+    return <p className='text-center mt-10'>Loading…</p>;
+  }
 
   return (
     <div className='max-w-7xl mx-auto px-4 py-6'>
-      <h2 className='text-xl font-semibold text-[#2c6449] mb-4'>
-        All Client Transactions
-      </h2>
-
       <audio ref={audioRef} src='/sounds/notification.mp3' preload='auto' />
 
       <div className='flex flex-wrap gap-3 mb-5'>
@@ -174,31 +139,17 @@ const AdminTransactions = () => {
           onChange={(e) => setSearchEmail(e.target.value)}
           className='w-64'
         />
-
         <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className='border border-gray-300 px-3 py-2 rounded text-sm'
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          className='border px-3 py-2 rounded text-sm'
         >
-          <option value='all'>All Statuses</option>
+          <option value='all'>All ({transactions.length})</option>
           <option value='paid'>Paid ({statusCounts.paid})</option>
           <option value='pending'>Pending ({statusCounts.pending})</option>
           <option value='failed'>Failed ({statusCounts.failed})</option>
         </select>
-
-        <select
-          value={dateFilter}
-          onChange={(e) => setDateFilter(e.target.value)}
-          className='border border-gray-300 px-3 py-2 rounded text-sm'
-        >
-          <option value='all'>All Time</option>
-          <option value='7days'>Last 7 Days</option>
-          <option value='thisMonth'>This Month</option>
-        </select>
-
-        <Button onClick={handleExportCSV} className='bg-[#2c6449] text-white'>
-          Export CSV
-        </Button>
+        <Button onClick={exportCSV}>Export CSV</Button>
       </div>
 
       <div className='overflow-auto border rounded-md'>
@@ -210,80 +161,47 @@ const AdminTransactions = () => {
               <th className='p-2 text-left'>Amount</th>
               <th className='p-2 text-left'>Status</th>
               <th className='p-2 text-left'>Date</th>
-              <th className='p-2 text-left'>Items</th>
             </tr>
           </thead>
           <tbody>
-            {paginatedTransactions.map((order) => {
-              const isFailed = order.orderStatus?.toLowerCase?.() === "failed";
-              const isExpanded = expandedOrderId === order.id;
-
-              return (
-                <tr key={order.id} className='border-b'>
-                  <td className='p-2'>{order.id}</td>
-                  <td className='p-2'>{order.userEmail || "N/A"}</td>
-                  <td className='p-2 flex items-center gap-1'>
-                    <img src={sarSymbol.src} alt='SAR' className='w-4 h-4' />
-                    {Number(order.totalAmount || 0).toFixed(2)}
-                  </td>
-                  <td
-                    className={`p-2 capitalize font-medium ${
-                      isFailed
-                        ? "text-red-600 bg-red-100 px-2 rounded"
-                        : "text-green-700"
-                    }`}
-                  >
-                    {order.orderStatus || "N/A"}
-                  </td>
-                  <td className='p-2'>
-                    {order.createdAt?.toDate?.().toLocaleString() || "N/A"}
-                  </td>
-                  <td className='p-2'>
-                    <button
-                      onClick={() =>
-                        setExpandedOrderId(isExpanded ? null : order.id)
-                      }
-                      className='text-sm text-[#2c6449] underline'
-                    >
-                      {isExpanded ? "Hide" : "View"}
-                    </button>
-                    {isExpanded && (
-                      <ul className='text-xs mt-2 list-disc ml-4'>
-                        {order.items?.map((item, i) => (
-                          <li key={i}>
-                            {item.name} – {item.quantity} x{" "}
-                            {Number(item.price || 0).toFixed(2)}
-                          </li>
-                        )) || <li>No items listed</li>}
-                      </ul>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
+            {pageData.map((o) => (
+              <tr key={o.id} className='border-b'>
+                <td className='p-2'>{o.id}</td>
+                <td className='p-2'>{o.userEmail}</td>
+                <td className='p-2 flex items-center gap-1'>
+                  <img src={sarSymbol.src} alt='SAR' className='w-4 h-4' />
+                  {Number(o.totalAmount || 0).toFixed(2)}
+                </td>
+                <td
+                  className={`p-2 ${
+                    o.orderStatus === "paid"
+                      ? "text-green-600"
+                      : "text-yellow-600"
+                  }`}
+                >
+                  {o.orderStatus}
+                </td>
+                <td className='p-2'>
+                  {o.createdAt?.toDate?.().toLocaleString() || "N/A"}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
 
-      <div className='text-right mt-4 text-sm font-medium text-[#2c6449]'>
-        Total Revenue:{" "}
-        <span className='inline-flex items-center gap-1'>
-          <img src={sarSymbol.src} alt='SAR' className='w-4 h-4' />
-          {totalRevenue.toFixed(2)}
-        </span>
-      </div>
+      <div className='text-right mt-4'>Total: {totalRevenue.toFixed(2)} SR</div>
 
       <div className='flex justify-center mt-6 gap-2'>
-        {Array.from(
-          { length: Math.ceil(filteredTransactions.length / PAGE_SIZE) },
+        {Array.from({ length: Math.ceil(filtered.length / PAGE_SIZE) }).map(
           (_, i) => (
             <button
-              key={i + 1}
+              key={i}
               onClick={() => setCurrentPage(i + 1)}
-              className={`px-3 py-1 rounded border text-sm ${
+              className={`px-3 py-1 rounded ${
                 currentPage === i + 1
                   ? "bg-[#2c6449] text-white"
-                  : "border-[#2c6449] text-[#2c6449]"
+                  : "border text-[#2c6449]"
               }`}
             >
               {i + 1}
@@ -293,6 +211,4 @@ const AdminTransactions = () => {
       </div>
     </div>
   );
-};
-
-export default AdminTransactions;
+}

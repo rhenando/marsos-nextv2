@@ -16,7 +16,7 @@ export default function RequireAuth({ children }) {
   }, [user, loading, router]);
 
   if (loading || !user) {
-    return <div className='p-4 text-center'>Checking authentication…</div>;
+    return <div className='p-4 text-center'> </div>;
   }
 
   return <>{children}</>;

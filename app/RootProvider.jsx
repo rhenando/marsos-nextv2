@@ -110,7 +110,7 @@ function AppLayout({ children }) {
 
       <RfqModal show={showRFQModal} onClose={() => setShowRFQModal(false)} />
 
-      <Toaster richColors position='top-center' />
+      <Toaster richColors position='top-center' containerStyle={{ top: 150 }} />
     </>
   );
 }

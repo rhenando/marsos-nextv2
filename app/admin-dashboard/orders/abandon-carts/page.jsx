@@ -2,45 +2,55 @@
 
 import { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/firebase/config";
-import { toast } from "sonner";
-import { useAuth } from "@/context/AuthContext";
+import { useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
+import { db } from "@/firebase/config";
+import { toast } from "sonner";
 
-const AbandonedCartsPage = () => {
-  const { userData } = useAuth();
+export default function AbandonedCartsPage() {
   const router = useRouter();
+
+  // grab auth state from Redux
+  const { user, loading: authLoading } = useSelector((state) => state.auth);
+  const role = user?.role;
+
   const [carts, setCarts] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // redirect non-admins
   useEffect(() => {
-    if (!userData || userData.role !== "admin") {
-      router.push("/admin-login");
+    if (!authLoading && (!user || role !== "admin")) {
+      router.replace("/admin-login");
     }
-  }, [userData, router]);
+  }, [authLoading, user, role, router]);
 
+  // fetch abandoned carts
   useEffect(() => {
-    const fetchAbandonedCarts = async () => {
-      try {
-        const snapshot = await getDocs(collection(db, "carts"));
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+    if (authLoading || !user || role !== "admin") return;
 
-        const filtered = data.filter((cart) => cart.items?.length > 0);
-        setCarts(filtered);
-      } catch (error) {
+    const fetchAbandoned = async () => {
+      try {
+        const snap = await getDocs(collection(db, "carts"));
+        const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        const nonEmpty = all.filter(
+          (c) => Array.isArray(c.items) && c.items.length
+        );
+        setCarts(nonEmpty);
+      } catch (e) {
+        console.error(e);
         toast.error("Failed to fetch abandoned carts.");
-        console.error(error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAbandonedCarts();
-  }, []);
+    fetchAbandoned();
+  }, [authLoading, user, role]);
+
+  if (loading) {
+    return <p className='text-center py-6'>Loading abandoned carts…</p>;
+  }
 
   return (
     <div className='max-w-5xl mx-auto px-4 py-6'>
@@ -48,9 +58,7 @@ const AbandonedCartsPage = () => {
         Abandoned Carts
       </h2>
 
-      {loading ? (
-        <p>Loading abandoned carts...</p>
-      ) : carts.length === 0 ? (
+      {carts.length === 0 ? (
         <p>No abandoned carts found.</p>
       ) : (
         <div className='space-y-4'>
@@ -72,8 +80,8 @@ const AbandonedCartsPage = () => {
               </p>
 
               <ul className='list-disc ml-4 text-sm text-gray-700'>
-                {cart.items?.map((item, index) => (
-                  <li key={index}>
+                {cart.items.map((item, idx) => (
+                  <li key={idx}>
                     {item.name} — Qty: {item.quantity}
                   </li>
                 ))}
@@ -84,6 +92,4 @@ const AbandonedCartsPage = () => {
       )}
     </div>
   );
-};
-
-export default AbandonedCartsPage;
+}

@@ -1,21 +1,24 @@
+// components/admin/OrdersClient.jsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { collection, getDocs, onSnapshot } from "firebase/firestore";
+import useAuth from "@/hooks/useAuth";
 import { db } from "@/firebase/config";
-import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 export default function OrdersClient() {
-  const { currentUser, loading, role } = useAuth();
-  const [orders, setOrders] = useState({});
+  const { user, loading: authLoading } = useAuth();
+  const [ordersByMethod, setOrdersByMethod] = useState({});
   const [seenNotifications, setSeenNotifications] = useState(new Set());
+  const firstLoad = useRef(true);
 
+  // Fetch initial snapshot of orders
   useEffect(() => {
-    if (loading || !currentUser || role !== "admin") return;
+    if (authLoading || !user || user.role !== "admin") return;
 
     const fetchOrders = async () => {
       const snapshot = await getDocs(collection(db, "orders"));
@@ -27,11 +30,14 @@ export default function OrdersClient() {
           ? new Date(data.createdAt.seconds * 1000).toLocaleString()
           : "Unknown";
 
+        // Ensure totalAmount is treated as a number before formatting
+        const amount = Number(data.totalAmount ?? 0);
+
         const order = {
           id: doc.id,
           transactionId: data.transactionId || "N/A",
           billNumber: data.billNumber || "N/A",
-          totalAmount: data.totalAmount || "0.00",
+          totalAmount: amount.toFixed(2),
           orderStatus: data.orderStatus || "Pending",
           createdAt,
           paymentMethod: data.paymentMethod || "Unknown",
@@ -39,65 +45,72 @@ export default function OrdersClient() {
           userEmail: data.userEmail || "Unknown",
         };
 
-        const method = order.paymentMethod;
-        if (!grouped[method]) grouped[method] = [];
-        grouped[method].push(order);
+        grouped[order.paymentMethod] = grouped[order.paymentMethod] || [];
+        grouped[order.paymentMethod].push(order);
       });
 
-      setOrders(grouped);
+      setOrdersByMethod(grouped);
+      firstLoad.current = false;
     };
 
-    fetchOrders();
-  }, [currentUser, loading, role]);
+    fetchOrders().catch(console.error);
+  }, [authLoading, user]);
 
+  // Listen for payment updates and show toast on approvals
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "payments"), (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (["added", "modified"].includes(change.type)) {
-          const data = change.doc.data();
-          const billNumber = change.doc.id;
+    if (authLoading || !user || user.role !== "admin") return;
 
-          setOrders((prev) => {
-            const updated = { ...prev };
-            for (const method in updated) {
-              updated[method] = updated[method].map((order) =>
-                order.billNumber === billNumber
-                  ? { ...order, orderStatus: data.paymentStatus }
-                  : order
-              );
-            }
-            return updated;
-          });
+    const unsub = onSnapshot(collection(db, "payments"), (snap) => {
+      snap.docChanges().forEach(({ type, doc }) => {
+        const bill = doc.id;
+        const data = doc.data();
 
-          if (
-            data.paymentStatus === "APPROVED" &&
-            !seenNotifications.has(billNumber)
-          ) {
-            toast.success(
-              `✅ Invoice #${billNumber} of ${data.paymentAmount} SR Approved!`
+        setOrdersByMethod((prev) => {
+          const next = {};
+          for (const method in prev) {
+            next[method] = prev[method].map((o) =>
+              o.billNumber === bill
+                ? { ...o, orderStatus: data.paymentStatus }
+                : o
             );
-            setSeenNotifications((prev) => new Set(prev).add(billNumber));
           }
+          return next;
+        });
+
+        if (
+          !firstLoad.current &&
+          (type === "added" || type === "modified") &&
+          data.paymentStatus === "APPROVED" &&
+          !seenNotifications.has(bill)
+        ) {
+          toast.success(`✅ Invoice #${bill} Approved!`);
+          setSeenNotifications((s) => new Set(s).add(bill));
         }
       });
+      firstLoad.current = false;
     });
 
-    return () => unsubscribe();
-  }, [seenNotifications]);
+    return () => unsub();
+  }, [authLoading, user, seenNotifications]);
 
-  if (loading)
+  // Show loading or unauthorized states
+  if (authLoading) {
     return (
-      <div className='py-10 text-center text-muted-foreground'>
-        Authenticating...
-      </div>
+      <p className='py-10 text-center text-muted-foreground'>Authenticating…</p>
     );
+  }
+  if (!user || user.role !== "admin") {
+    return <p className='py-10 text-center text-red-500'>❌ Not authorized.</p>;
+  }
 
-  if (!currentUser?.uid || role !== "admin")
+  const methods = Object.keys(ordersByMethod);
+  if (methods.length === 0) {
     return (
-      <div className='py-10 text-center text-red-500'>
-        ❌ You are not authorized to view this page.
-      </div>
+      <p className='text-center text-muted-foreground py-10'>
+        No orders found.
+      </p>
     );
+  }
 
   return (
     <div className='max-w-6xl mx-auto px-4 py-6'>
@@ -105,21 +118,20 @@ export default function OrdersClient() {
         All Orders
       </h2>
 
-      {Object.keys(orders).length === 0 ? (
-        <p className='text-center text-muted-foreground'>No orders found.</p>
-      ) : (
-        Object.entries(orders).map(([method, list]) => (
-          <div key={method} className='mb-8'>
-            <h3 className='text-lg font-semibold mb-3'>{method} Orders</h3>
-            <div className='grid gap-4 sm:grid-cols-2 md:grid-cols-3'>
-              {list.map((order) => (
+      {methods.map((method) => (
+        <div key={method} className='mb-8'>
+          <h3 className='text-lg font-semibold mb-3'>{method} Orders</h3>
+          <div className='grid gap-4 sm:grid-cols-2 md:grid-cols-3'>
+            {ordersByMethod[method].map((order) => {
+              const isApproved = order.orderStatus === "APPROVED";
+              return (
                 <Card
                   key={order.id}
                   onClick={() =>
-                    setSeenNotifications((prev) => {
-                      const updated = new Set(prev);
-                      updated.delete(order.billNumber);
-                      return updated;
+                    setSeenNotifications((s) => {
+                      const next = new Set(s);
+                      next.delete(order.billNumber);
+                      return next;
                     })
                   }
                   className='cursor-pointer hover:shadow-md transition'
@@ -147,7 +159,7 @@ export default function OrdersClient() {
                       <strong>Status:</strong>{" "}
                       <span
                         className={
-                          order.orderStatus === "APPROVED"
+                          isApproved
                             ? "text-green-600 font-semibold"
                             : "text-yellow-600"
                         }
@@ -159,14 +171,10 @@ export default function OrdersClient() {
                       <strong>Date:</strong> {order.createdAt}
                     </p>
                     <Button
-                      variant={
-                        order.orderStatus === "APPROVED"
-                          ? "default"
-                          : "secondary"
-                      }
+                      variant={isApproved ? "default" : "secondary"}
                       className='w-full'
                       asChild
-                      disabled={order.orderStatus !== "APPROVED"}
+                      disabled={!isApproved}
                     >
                       <Link href={`/review-invoice/${order.billNumber}`}>
                         Review Invoice
@@ -174,11 +182,11 @@ export default function OrdersClient() {
                     </Button>
                   </CardContent>
                 </Card>
-              ))}
-            </div>
+              );
+            })}
           </div>
-        ))
-      )}
+        </div>
+      ))}
     </div>
   );
 }
